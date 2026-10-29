@@ -5,6 +5,7 @@ test.py
 
 docs/
 CLAUDE.md
+sample_data/
 
 # Виртуальное окружение Python (самый большой источник мусорных токенов)
 .venv/
