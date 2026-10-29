@@ -1,0 +1,98 @@
+# Типы оборудования: канонический тип -> категория (AssetCategory) и синонимы.
+# Категории по методике CMDB:
+#   endpoint   — оконечное оборудование
+#   network    — сетевое оборудование
+#   peripheral — периферия (привязывается к устройству только через «Местоположение»)
+#   adapter    — компонент в составе устройства (привязывается через «Местоположение» или строку выше)
+
+# --- endpoint ---
+["Сервер"]
+category = "endpoint"
+aliases  = ["Сервер базы данных", "Server"]
+
+["Рабочая станция"]
+category = "endpoint"
+aliases  = ["ПК", "Компьютер", "Персональный компьютер", "Системный блок"]
+
+["Ноутбук"]
+category = "endpoint"
+aliases  = ["Laptop"]
+
+["Моноблок"]
+category = "endpoint"
+aliases  = []
+
+# --- network ---
+["Коммутатор"]
+category = "network"
+aliases  = ["Сетевой коммутатор", "Switch"]
+
+["Маршрутизатор"]
+category = "network"
+aliases  = ["Роутер", "Router"]
+
+["Точка доступа"]
+category = "network"
+aliases  = ["Wi-Fi точка доступа"]
+
+["Межсетевой экран"]
+category = "network"
+aliases  = ["Firewall", "Фаервол"]
+
+# --- peripheral ---
+["Принтер"]
+category = "peripheral"
+aliases  = []
+
+["МФУ"]
+category = "peripheral"
+aliases  = ["Многофункциональное устройство"]
+
+["Сканер"]
+category = "peripheral"
+aliases  = ["Скан"]
+
+["Монитор"]
+category = "peripheral"
+aliases  = []
+
+["Клавиатура"]
+category = "peripheral"
+aliases  = []
+
+["Мышь"]
+category = "peripheral"
+aliases  = ["Мышка", "Компьютерная мышь"]
+
+# --- adapter ---
+["Материнская плата"]
+category = "adapter"
+aliases  = ["Мат. плата"]
+
+["Процессор"]
+category = "adapter"
+aliases  = ["CPU"]
+
+["Модуль оперативной памяти"]
+category = "adapter"
+aliases  = ["ОЗУ", "Оперативная память", "RAM"]
+
+["Видеоадаптер"]
+category = "adapter"
+aliases  = ["Видеокарта"]
+
+["Звуковая карта"]
+category = "adapter"
+aliases  = []
+
+["Сетевая карта"]
+category = "adapter"
+aliases  = ["Сетевой адаптер"]
+
+["Контроллер"]
+category = "adapter"
+aliases  = []
+
+["CD/DVD привод"]
+category = "adapter"
+aliases  = ["Оптический привод"]
