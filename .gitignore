@@ -1,11 +1,11 @@
 test.py
 .claude/
-.claudeignore
 .mcp.json
 .mcp.json.tmp
-docker.txt
-app/services/secret/
-secret/
+
+docs/
+CLAUDE.md
+
 # Виртуальное окружение Python (самый большой источник мусорных токенов)
 .venv/
 venv/
