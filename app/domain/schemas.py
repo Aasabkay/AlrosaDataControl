@@ -39,14 +39,14 @@ CODE_CATEGORY: dict[IssueCode, IssueCategory] = {
     IssueCode.MISSING_IN_SOURCE: IssueCategory.MISMATCH,
 }
 
-# Критичность ошибки
 class Severity(StrEnum):
+    """Критичность ошибки"""
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
-
 class AssetCategory(StrEnum):
+    """Список категорий оборудования"""
     ENDPOINT = "endpoint"        # оконечное: ПК, ноутбук, сервер
     NETWORK = "network"          # сетевое: коммутатор, маршрутизатор
     PERIPHERAL = "peripheral"    # периферия: монитор, принтер, сканер, клавиатура, мышь
@@ -54,29 +54,24 @@ class AssetCategory(StrEnum):
 
 
 class MatchStatus(StrEnum):
+    """Показывает итог сопоставления группы"""
     MATCHED = "matched"                  # есть пара в других источниках
     ONLY_IN_SOURCE = "only_in_source"    # запись есть только в одном источнике
     AMBIGUOUS = "ambiguous"              # несколько кандидатов, нужна ручная проверка
 
 
 class MatchMethod(StrEnum):
-    # Перечислены в порядке приоритета при сопоставлении.
+    """Показывает, по какому признаку данные склеились (перечислены в порядке приоритета при сопоставлении)"""
     INVENTORY_NUMBER = "inventory_number"
     SERIAL_NUMBER = "serial_number"
     NAME = "name"                        # точное совпадение нормализованного названия (сетевого имени)
     FUZZY = "fuzzy"                      # производитель + модель + название через rapidfuzz
 
-
-# ---------- Ссылка на исходную строку ----------
-
 class RowRef(BaseModel):
-    """Откуда взялась запись. Нужна, чтобы любую ошибку можно было показать в исходном файле."""
+    """Показывает откуда взялась запись"""
     source_id: int
     batch_id: int          # конкретная загрузка (import_batch)
     row_number: int        # номер строки в файле, считая с 1 (шапка = 1)
-
-
-# ---------- Выход этапа 2 (Роман) -> вход этапа 3 (Андрей) ----------
 
 class NormalizedRecord(BaseModel):
     ref: RowRef
@@ -103,19 +98,14 @@ class NormalizedRecord(BaseModel):
     # Исходные значения «как в файле»: для карточки актива и отладки
     raw: dict[str, str] = Field(default_factory=dict)
 
-
-# ---------- Внутри части Андрея: выход этапа 3 ----------
-
 class AssetGroup(BaseModel):
     """Актив = группа записей из разных источников, признанных одной железкой."""
     asset_key: str                       # стабильный ключ группы, например инв. номер
-    records: list[NormalizedRecord]
+    records: list[NormalizedRecord]      # Записи из разных групп про один аппарат
     match_status: MatchStatus
     match_method: MatchMethod | None = None
     match_score: float | None = None     # 0..100, только для FUZZY
 
-
-# ---------- Общий формат проблемы (пишут обе части) ----------
 
 class FieldValue(BaseModel):
     """Значение поля в конкретной строке. Список таких пар показывает, где и что расходится."""
