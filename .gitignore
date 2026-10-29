@@ -1,0 +1,39 @@
+test.py
+.claude/
+.claudeignore
+.mcp.json
+.mcp.json.tmp
+docker.txt
+app/services/secret/
+secret/
+# Виртуальное окружение Python (самый большой источник мусорных токенов)
+.venv/
+venv/
+env/
+
+# Кэш Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Служебные настройки IDE PyCharm / VS Code
+.idea/
+.vscode/
+
+# Файлы локальных баз данных
+*.db
+*.sqlite
+*.sqlite3
+
+# Конфигурации с секретными токенами
+.env
+.env.*
+
+# Логи работы приложения
+*.log
+logs/
+
+# Сессии Pyrogram / Telethon (если используются)
+*.session
+*.session-journal
