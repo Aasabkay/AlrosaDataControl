@@ -1,3 +1,8 @@
+alembic==1.20.1
+asyncpg==0.32.0
+fastapi==0.162.0
+openpyxl==3.1.5
 pydantic>=2.14
 pytest>=9.2
+sqlalchemy==2.1.6
 rapidfuzz>=3.14

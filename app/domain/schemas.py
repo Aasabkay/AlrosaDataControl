@@ -15,6 +15,7 @@ class IssueCode(StrEnum):
     BAD_COLUMN_COUNT = "BAD_COLUMN_COUNT"
     PARENT_REJECTED = "PARENT_REJECTED"
     NAME_CONFLICT = "NAME_CONFLICT"
+    NO_PARENT = "NO_PARENT"
     # дубликаты
     DUP_IN_SOURCE = "DUP_IN_SOURCE"
     DUP_CROSS_SOURCE = "DUP_CROSS_SOURCE"
@@ -30,13 +31,14 @@ CODE_CATEGORY: dict[IssueCode, IssueCategory] = {
     IssueCode.BAD_COLUMN_COUNT: IssueCategory.EXCLUDED,
     IssueCode.PARENT_REJECTED: IssueCategory.EXCLUDED,
     IssueCode.NAME_CONFLICT: IssueCategory.EXCLUDED,
+    IssueCode.NO_PARENT: IssueCategory.EXCLUDED,
     IssueCode.DUP_IN_SOURCE: IssueCategory.DUPLICATE,
     IssueCode.DUP_CROSS_SOURCE: IssueCategory.DUPLICATE,
     IssueCode.MISSING_FIELD: IssueCategory.MISSING_OR_STATUS,
     IssueCode.INVALID_STATUS: IssueCategory.MISSING_OR_STATUS,
     IssueCode.BAD_FORMAT: IssueCategory.MISSING_OR_STATUS,
     IssueCode.FIELD_MISMATCH: IssueCategory.MISMATCH,
-    IssueCode.MISSING_IN_SOURCE: IssueCategory.MISMATCH,
+    IssueCode.MISSING_IN_SOURCE: IssueCategory.MISMATCH
 }
 
 class Severity(StrEnum):
