@@ -23,6 +23,7 @@ class IssueCode(StrEnum):
     MISSING_FIELD = "MISSING_FIELD"
     INVALID_STATUS = "INVALID_STATUS"
     BAD_FORMAT = "BAD_FORMAT"
+    INVALID_ASSET_TYPE = "INVALID_ASSET_TYPE"
     # расхождения
     FIELD_MISMATCH = "FIELD_MISMATCH"
     MISSING_IN_SOURCE = "MISSING_IN_SOURCE"
@@ -37,6 +38,7 @@ CODE_CATEGORY: dict[IssueCode, IssueCategory] = {
     IssueCode.MISSING_FIELD: IssueCategory.MISSING_OR_STATUS,
     IssueCode.INVALID_STATUS: IssueCategory.MISSING_OR_STATUS,
     IssueCode.BAD_FORMAT: IssueCategory.MISSING_OR_STATUS,
+    IssueCode.INVALID_ASSET_TYPE: IssueCategory.MISSING_OR_STATUS,
     IssueCode.FIELD_MISMATCH: IssueCategory.MISMATCH,
     IssueCode.MISSING_IN_SOURCE: IssueCategory.MISMATCH
 }
