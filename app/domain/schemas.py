@@ -15,6 +15,7 @@ class IssueCode(StrEnum):
     BAD_COLUMN_COUNT = "BAD_COLUMN_COUNT"
     PARENT_REJECTED = "PARENT_REJECTED"
     NAME_CONFLICT = "NAME_CONFLICT"
+    INVENTORY_CONFLICT = "INVENTORY_CONFLICT"
     NO_PARENT = "NO_PARENT"
     # дубликаты
     DUP_IN_SOURCE = "DUP_IN_SOURCE"
@@ -32,6 +33,7 @@ CODE_CATEGORY: dict[IssueCode, IssueCategory] = {
     IssueCode.BAD_COLUMN_COUNT: IssueCategory.EXCLUDED,
     IssueCode.PARENT_REJECTED: IssueCategory.EXCLUDED,
     IssueCode.NAME_CONFLICT: IssueCategory.EXCLUDED,
+    IssueCode.INVENTORY_CONFLICT: IssueCategory.EXCLUDED,
     IssueCode.NO_PARENT: IssueCategory.EXCLUDED,
     IssueCode.DUP_IN_SOURCE: IssueCategory.DUPLICATE,
     IssueCode.DUP_CROSS_SOURCE: IssueCategory.DUPLICATE,
