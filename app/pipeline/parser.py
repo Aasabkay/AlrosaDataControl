@@ -1,9 +1,10 @@
 from enum import StrEnum
 from pathlib import Path
 
-from app.domain.schemas import RowRef, Issue, IssueCode, Severity, NormalizedRecord
+from app.domain.schemas import RowRef, Issue, IssueCode, Severity, NormalizedRecord, ParseResult
 from app.pipeline.normalizer import normalize_row
 from app.pipeline.readers import read_rows
+from app.pipeline.validators import find_duplicates, find_conflicts, build_names, resolve_parents
 from app.rules.loader import Rules, normalize_key
 
 
@@ -52,6 +53,7 @@ def parse_file(path: Path, source_id: int, batch_id: int, rules: Rules):
             rejected_cells.update(normalize_key(c) for c in cells if c)
             continue
 
+        row_status[row_number] = RowStatus.ACCEPTED
         data = {} # data = {"name": "ПК-01", "asset_type": "Рабочая станция", ...}
         for index, value in enumerate(cells):
             field = field_map.get(index)
@@ -64,6 +66,25 @@ def parse_file(path: Path, source_id: int, batch_id: int, rules: Rules):
         records.append(record)
         issues.extend(row_issues)
 
-    return records, issues
+    dup_excluded, dup_issues = find_duplicates(records)
+    remaining = [r for r in records if r.ref.row_number not in dup_excluded]
+    conflict_excluded, conflict_issues = find_conflicts(remaining)
+
+    excluded = dup_excluded | conflict_excluded
+    for row in excluded:
+        row_status[row] = RowStatus.REJECTED
+    issues.extend(conflict_issues)
+    issues.extend(dup_issues)
+
+    names = build_names(records, excluded)
+
+    parent_excluded, parent_issues = resolve_parents(records, names, rejected_cells, row_status, RowStatus)
+    issues.extend(parent_issues)
+    for row in parent_excluded:
+        row_status[row] = RowStatus.REJECTED
+
+
+    accepted = [r for r in records if row_status[r.ref.row_number] == RowStatus.ACCEPTED]
+    return ParseResult(records=accepted, issues=issues)
 
 
