@@ -104,6 +104,11 @@ class NormalizedRecord(BaseModel):
     # Исходные значения «как в файле»: для карточки актива и отладки
     raw: dict[str, str] = Field(default_factory=dict)
 
+class ParseResult(BaseModel):
+    """Данные после парсинга - принятые строки и ошибки"""
+    records: list[NormalizedRecord]
+    issues: list[Issue]
+
 class AssetGroup(BaseModel):
     """Актив = группа записей из разных источников, признанных одной железкой."""
     asset_key: str                       # стабильный ключ группы, например инв. номер
