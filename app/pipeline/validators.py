@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from app.domain.schemas import NormalizedRecord, Issue, IssueCode, Severity, FieldValue
+from app.domain.schemas import NormalizedRecord, Issue, IssueCode, Severity, FieldValue, AssetCategory
 from app.rules.loader import normalize_key
 
 
@@ -79,7 +79,7 @@ def find_conflicts(records: list[NormalizedRecord]) -> tuple[set[int], list[Issu
         values = [FieldValue(ref=r.ref, value=r.name) for r in group]
 
         rows = ', '.join([str(r.ref.row_number) for r in group])
-        msg = f"У строк {rows} конфликт имен: они имеют одинаковые инв. номера, но разные имена"
+        msg = f"У строк {rows} конфликт инв.номеров: они имеют одинаковые инв. номера, но разные имена"
 
         issues.append(Issue(
             refs=[r.ref for r in group],
@@ -90,4 +90,56 @@ def find_conflicts(records: list[NormalizedRecord]) -> tuple[set[int], list[Issu
 
     return excluded, issues
 
+def build_names(records: list[NormalizedRecord], excluded: set[int]) -> dict[str, tuple[AssetCategory, bool, int]]:
+    names: dict[str, tuple[AssetCategory, bool, int]] = {}
 
+    for r in records:
+        if not r.name:
+            continue
+        is_excluded = True if r.ref.row_number in excluded else False
+        key = normalize_key(r.name)
+        if key in names and not names[key][1]:
+            continue
+        names[key] = (r.category, is_excluded, r.ref.row_number)
+
+    return names
+
+def resolve_parents(records, names, rejected_cells, row_status, RowStatus):
+    by_row = {r.ref.row_number: r for r in records}
+    excluded: set[int] = set()
+    issues: list[Issue] = []
+
+    def reject(r, code, message):
+        issues.append(Issue(code=code, severity=Severity.HIGH, message=message,
+                            refs=[r.ref], field="location"))
+        excluded.add(r.ref.row_number)
+
+    children = [r for r in records
+                if row_status.get(r.ref.row_number) == RowStatus.ACCEPTED
+                and r.category in (AssetCategory.PERIPHERAL, AssetCategory.ADAPTER)]
+
+    for r in children:
+        row = r.ref.row_number
+        last = normalize_key(r.location.split("\\")[-1]) if r.location else None
+
+        if last in names:
+            if names[last][1]:
+                reject(r, IssueCode.PARENT_REJECTED,
+                       f"Строка {row}: родитель из строки {names[last][2]} исключён")
+            continue
+        if last in rejected_cells:
+            reject(r, IssueCode.PARENT_REJECTED,
+                   f"Строка {row}: родитель отброшен при проверке числа колонок")
+            continue
+
+        if r.category == AssetCategory.PERIPHERAL:
+            continue
+
+        above = row_status.get(row - 1)
+        if above == RowStatus.REJECTED:
+            reject(r, IssueCode.PARENT_REJECTED, f"Строка {row}: строка выше исключена")
+        elif not (above == RowStatus.ACCEPTED
+                  and by_row[row - 1].category == AssetCategory.ENDPOINT):
+            reject(r, IssueCode.NO_PARENT, f"Строка {row}: не найден родитель")
+
+    return excluded, issues
