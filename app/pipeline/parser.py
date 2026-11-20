@@ -4,7 +4,7 @@ from pathlib import Path
 from app.domain.schemas import RowRef, Issue, IssueCode, Severity, NormalizedRecord, ParseResult
 from app.pipeline.normalizer import normalize_row
 from app.pipeline.readers import read_rows
-from app.pipeline.validators import find_duplicates, find_conflicts, build_names, resolve_parents
+from app.pipeline.validators import find_duplicates, find_conflicts, resolve_parents
 from app.rules.loader import Rules, normalize_key
 
 
@@ -76,12 +76,8 @@ def parse_file(path: Path, source_id: int, batch_id: int, rules: Rules):
     issues.extend(conflict_issues)
     issues.extend(dup_issues)
 
-    names = build_names(records, excluded)
-
-    parent_excluded, parent_issues = resolve_parents(records, names, rejected_cells, row_status, RowStatus)
+    parent_excluded, parent_issues = resolve_parents(records, excluded, rejected_cells, row_status, RowStatus)
     issues.extend(parent_issues)
-    for row in parent_excluded:
-        row_status[row] = RowStatus.REJECTED
 
 
     accepted = [r for r in records if row_status[r.ref.row_number] == RowStatus.ACCEPTED]
