@@ -1,10 +1,8 @@
 test.py
-.claude/
 .mcp.json
 .mcp.json.tmp
 
 docs/
-CLAUDE.md
 
 # Виртуальное окружение Python (самый большой источник мусорных токенов)
 .venv/
