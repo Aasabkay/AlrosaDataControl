@@ -94,7 +94,7 @@ def build_names(records: list[NormalizedRecord], excluded: set[int]) -> dict[str
     names: dict[str, tuple[AssetCategory, bool, int]] = {}
 
     for r in records:
-        if not r.name:
+        if not r.name or r.category not in (AssetCategory.ENDPOINT, AssetCategory.NETWORK):
             continue
         is_excluded = True if r.ref.row_number in excluded else False
         key = normalize_key(r.name)
@@ -104,42 +104,52 @@ def build_names(records: list[NormalizedRecord], excluded: set[int]) -> dict[str
 
     return names
 
-def resolve_parents(records, names, rejected_cells, row_status, RowStatus):
+def resolve_parents(records, already_excluded, rejected_cells, row_status, RowStatus):
     by_row = {r.ref.row_number: r for r in records}
     excluded: set[int] = set()
     issues: list[Issue] = []
+    all_excluded = set(already_excluded)
 
     def reject(r, code, message):
         issues.append(Issue(code=code, severity=Severity.HIGH, message=message,
                             refs=[r.ref], field="location"))
         excluded.add(r.ref.row_number)
+        all_excluded.add(r.ref.row_number)
+        row_status[r.ref.row_number] = RowStatus.REJECTED
 
-    children = [r for r in records
-                if row_status.get(r.ref.row_number) == RowStatus.ACCEPTED
-                and r.category in (AssetCategory.PERIPHERAL, AssetCategory.ADAPTER)]
+    while True:
+        names = build_names(records, all_excluded)
+        before = len(all_excluded)
 
-    for r in children:
-        row = r.ref.row_number
-        last = normalize_key(r.location.split("\\")[-1]) if r.location else None
+        children = [r for r in records
+                    if r.ref.row_number not in all_excluded
+                    and r.category in (AssetCategory.PERIPHERAL, AssetCategory.ADAPTER)]
 
-        if last in names:
-            if names[last][1]:
+        for r in children:
+            row = r.ref.row_number
+            last = normalize_key(r.location.split("\\")[-1]) if r.location else None
+
+            if last in names:
+                if names[last][1]:
+                    reject(r, IssueCode.PARENT_REJECTED,
+                           f"Строка {row}: родитель из строки {names[last][2]} исключён")
+                continue
+            if last in rejected_cells:
                 reject(r, IssueCode.PARENT_REJECTED,
-                       f"Строка {row}: родитель из строки {names[last][2]} исключён")
-            continue
-        if last in rejected_cells:
-            reject(r, IssueCode.PARENT_REJECTED,
-                   f"Строка {row}: родитель отброшен при проверке числа колонок")
-            continue
+                       f"Строка {row}: родитель отброшен при проверке числа колонок")
+                continue
 
-        if r.category == AssetCategory.PERIPHERAL:
-            continue
+            if r.category == AssetCategory.PERIPHERAL:
+                continue
 
-        above = row_status.get(row - 1)
-        if above == RowStatus.REJECTED:
-            reject(r, IssueCode.PARENT_REJECTED, f"Строка {row}: строка выше исключена")
-        elif not (above == RowStatus.ACCEPTED
-                  and by_row[row - 1].category == AssetCategory.ENDPOINT):
-            reject(r, IssueCode.NO_PARENT, f"Строка {row}: не найден родитель")
+            above = row_status.get(row - 1)
+            if above == RowStatus.REJECTED:
+                reject(r, IssueCode.PARENT_REJECTED, f"Строка {row}: строка выше исключена")
+            elif not (above == RowStatus.ACCEPTED
+                      and by_row[row - 1].category == AssetCategory.ENDPOINT):
+                reject(r, IssueCode.NO_PARENT, f"Строка {row}: не найден родитель")
+
+        if len(all_excluded) == before:
+            break
 
     return excluded, issues
