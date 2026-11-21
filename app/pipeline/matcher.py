@@ -1,87 +1,130 @@
-from rapidfuzz import process, fuzz
-from app.domain.schemas import NormalizedRecord, AssetGroup, MatchStatus, MatchMethod
+from rapidfuzz import fuzz
 
-def match_records(records: list[NormalizedRecord]) -> list[AssetGroup]:
-    groups: list[AssetGroup] = []
-    unmatched = records.copy()
+from app.domain.schemas import AssetGroup, MatchMethod, MatchStatus, NormalizedRecord
 
-    def determine_status(matched_recs: list[NormalizedRecord]) -> MatchStatus:
-        unique_sources = {r.ref.source_id for r in matched_recs}
-        return MatchStatus.MATCHED if len(unique_sources) > 1 else MatchStatus.ONLY_IN_SOURCE
+# Насколько похожими должны быть подписи, чтобы склеить записи без номеров.
+FUZZY_SCORE_CUTOFF = 85
 
-    leftovers_after_inv = []
-    inv_map = {}
-    for r in unmatched:
-        if r.inventory_number:
-            inv_map.setdefault(r.inventory_number, []).append(r)
+# Если два кандидата отличаются меньше чем на столько баллов — это неоднозначность.
+AMBIGUITY_DELTA = 5
+
+
+def _determine_status(records: list[NormalizedRecord]) -> MatchStatus:
+    unique_sources = {r.ref.source_id for r in records}
+    return MatchStatus.MATCHED if len(unique_sources) > 1 else MatchStatus.ONLY_IN_SOURCE
+
+
+def _group_by_key(
+    records: list[NormalizedRecord],
+    key_func,
+    method: MatchMethod,
+) -> tuple[list[AssetGroup], list[NormalizedRecord]]:
+    """Группирует записи по ключу, записи без ключа возвращает отдельно."""
+    buckets: dict[str, list[NormalizedRecord]] = {}
+    leftovers: list[NormalizedRecord] = []
+
+    for record in records:
+        key = key_func(record)
+        if key is None:
+            leftovers.append(record)
         else:
-            leftovers_after_inv.append(r)
-            
-    for inv, recs in inv_map.items():
-        groups.append(AssetGroup(
-            asset_key=inv, records=recs,
-            match_status=determine_status(recs), match_method=MatchMethod.INVENTORY_NUMBER
-        ))
+            buckets.setdefault(key, []).append(record)
 
-    unmatched = leftovers_after_inv
-    leftovers_after_serial = []
-    serial_map = {}
-    for r in unmatched:
-        if r.serial_number:
-            serial_map.setdefault(r.serial_number, []).append(r)
-        else:
-            leftovers_after_serial.append(r)
-            
-    for serial, recs in serial_map.items():
-        groups.append(AssetGroup(
-            asset_key=serial, records=recs,
-            match_status=determine_status(recs), match_method=MatchMethod.SERIAL_NUMBER
-        ))
+    groups = [
+        AssetGroup(
+            asset_key=key,
+            records=group_records,
+            match_status=_determine_status(group_records),
+            match_method=method,
+        )
+        for key, group_records in buckets.items()
+    ]
+    return groups, leftovers
 
-    unmatched = leftovers_after_serial
-    leftovers_after_name = []
-    name_map = {}
-    for r in unmatched:
-        if r.name:
-            name_map.setdefault(r.name, []).append(r)
-        else:
-            leftovers_after_name.append(r)
-            
-    for name, recs in name_map.items():
-        if len(recs) > 1:
-            unique_invs = {r.inventory_number for r in recs if r.inventory_number}
-            if len(unique_invs) > 1:
-                continue
 
-        groups.append(AssetGroup(
-            asset_key=name, records=recs,
-            match_status=determine_status(recs), match_method=MatchMethod.NAME
-        ))
-    established_groups = {g.asset_key: g for g in groups if g.asset_key}
-    established_names = list(established_groups.keys())
+def _signature(group: AssetGroup) -> str | None:
+    """Подпись для нечёткого сравнения: производитель + модель + название."""
+    record = next((r for r in group.records if r.name), None)
+    if record is None:
+        return None
 
-    for r in leftovers_after_name:
-        if not r.name or not established_names:
-            groups.append(AssetGroup(
-                asset_key=r.name or "UNKNOWN", records=[r],
-                match_status=MatchStatus.ONLY_IN_SOURCE, match_method=MatchMethod.FUZZY
-            ))
+    parts = [record.manufacturer, record.model, record.name]
+    signature = " ".join(part for part in parts if part)
+    return signature.casefold()
+
+
+def _merge_similar_names(groups: list[AssetGroup]) -> list[AssetGroup]:
+    """Склеивает группы с похожими названиями, помечает неоднозначные.
+
+    Работает только с группами, у которых нет инвентарного и серийного номеров:
+    если номер есть, он уже решил, что это за актив, и гадать не нужно.
+    """
+    candidates = [g for g in groups if g.match_method == MatchMethod.NAME]
+    others = [g for g in groups if g.match_method != MatchMethod.NAME]
+
+    merged: list[AssetGroup] = []
+    pending = list(candidates)
+
+    while pending:
+        current = pending.pop(0)
+        current_signature = _signature(current)
+
+        scored = []
+        if current_signature:
+            for other in pending:
+                other_signature = _signature(other)
+                if other_signature:
+                    score = fuzz.WRatio(current_signature, other_signature)
+                    scored.append((score, other))
+
+        scored.sort(key=lambda pair: pair[0], reverse=True)
+
+        if not scored or scored[0][0] < FUZZY_SCORE_CUTOFF:
+            merged.append(current)
             continue
 
-        match = process.extractOne(r.name, established_names, scorer=fuzz.token_sort_ratio, score_cutoff=85)
+        best_score, best = scored[0]
+        second_score = scored[1][0] if len(scored) > 1 else 0
 
-        if match:
-            matched_name = match[0]
-            target_group = established_groups[matched_name]
-            target_group.records.append(r)
-            target_group.match_status = determine_status(target_group.records)
-        else:
-            new_group = AssetGroup(
-                asset_key=r.name, records=[r],
-                match_status=MatchStatus.ONLY_IN_SOURCE, match_method=MatchMethod.FUZZY
+        if len(scored) > 1 and second_score >= FUZZY_SCORE_CUTOFF and best_score - second_score < AMBIGUITY_DELTA:
+            current.match_status = MatchStatus.AMBIGUOUS
+            current.match_method = MatchMethod.FUZZY
+            current.match_score = best_score
+            merged.append(current)
+            continue
+
+        current.records.extend(best.records)
+        current.match_status = _determine_status(current.records)
+        current.match_method = MatchMethod.FUZZY
+        current.match_score = best_score
+        pending.remove(best)
+        merged.append(current)
+
+    return [*others, *merged]
+
+
+def match_records(records: list[NormalizedRecord]) -> list[AssetGroup]:
+    """Склеивает записи в активы по ключам: инв. номер → серийный → название → fuzzy."""
+    groups, leftovers = _group_by_key(
+        records, lambda r: r.inventory_number, MatchMethod.INVENTORY_NUMBER
+    )
+    serial_groups, leftovers = _group_by_key(
+        leftovers, lambda r: r.serial_number, MatchMethod.SERIAL_NUMBER
+    )
+    name_groups, leftovers = _group_by_key(
+        leftovers, lambda r: r.name, MatchMethod.NAME
+    )
+
+    groups = [*groups, *serial_groups, *name_groups]
+    groups = _merge_similar_names(groups)
+
+    for record in leftovers:
+        groups.append(
+            AssetGroup(
+                asset_key="UNKNOWN",
+                records=[record],
+                match_status=MatchStatus.ONLY_IN_SOURCE,
             )
-            groups.append(new_group)
-            established_groups[r.name] = new_group
-            established_names.append(r.name)
+        )
 
     return groups
