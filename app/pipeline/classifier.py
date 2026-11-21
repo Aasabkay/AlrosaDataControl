@@ -1,4 +1,4 @@
-from app.domain.schemas import IssueCode, Severity
+from app.domain.schemas import Issue, IssueCode, Severity
 
 # Итоговая критичность по коду ошибки.
 # HIGH  — ломает сопоставление или ведёт к неверной карточке актива
@@ -33,3 +33,12 @@ SEVERITY_ORDER: dict[Severity, int] = {
 def _severity_for(code: IssueCode) -> Severity:
     """Критичность по коду; для нового кода без записи в таблице — MEDIUM."""
     return ISSUE_SEVERITY.get(code, Severity.MEDIUM)
+
+
+def classify_issues(issues: list[Issue]) -> list[Issue]:
+    """Возвращает новый список ошибок, отсортированный HIGH → MEDIUM → LOW.
+
+    sorted() создаёт копию, поэтому входной список не меняется.
+    Сортировка стабильная: ошибки одной критичности сохраняют исходный порядок.
+    """
+    return sorted(issues, key=lambda issue: SEVERITY_ORDER[issue.severity])
