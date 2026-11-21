@@ -41,6 +41,16 @@ def test_clean_group_has_no_issues():
     assert run_detectors([group]) == []
 
 
+def test_single_record_group_has_no_issues():
+    group = AssetGroup(
+        asset_key="ИНВ-001",
+        records=[make_rec()],
+        match_status=MatchStatus.ONLY_IN_SOURCE,
+        match_method=MatchMethod.INVENTORY_NUMBER,
+    )
+    assert run_detectors([group]) == []
+
+
 def test_field_mismatch_detected():
     group = AssetGroup(
         asset_key="ИНВ-001",
@@ -72,32 +82,19 @@ def test_empty_value_is_not_a_mismatch():
     assert run_detectors([group]) == []
 
 
-def test_missing_required_fields_detected():
+def test_missing_fields_are_normalizer_job():
+    """Пропуски полей проверяет normalizer, детекторы их не дублируют."""
     group = AssetGroup(
         asset_key="ИНВ-004",
         records=[make_rec(location=None, responsible_person=None)],
         match_status=MatchStatus.ONLY_IN_SOURCE,
         match_method=MatchMethod.INVENTORY_NUMBER,
     )
-    issues = run_detectors([group])
-    assert len(issues) == 2
-    assert {i.code for i in issues} == {IssueCode.MISSING_FIELD}
-    assert {i.field for i in issues} == {"location", "responsible_person"}
+    assert run_detectors([group]) == []
 
 
-def test_empty_string_counts_as_missing():
-    group = AssetGroup(
-        asset_key="ИНВ-005",
-        records=[make_rec(location="")],
-        match_status=MatchStatus.ONLY_IN_SOURCE,
-        match_method=MatchMethod.INVENTORY_NUMBER,
-    )
-    issues = run_detectors([group])
-    assert [(i.code, i.field) for i in issues] == [(IssueCode.MISSING_FIELD, "location")]
-
-
-def test_status_checks_stay_in_normalizer():
-    """Невалидный и пустой статус — забота normalizer, детекторы их не дублируют."""
+def test_status_checks_are_normalizer_job():
+    """Невалидный статус и его формат — тоже забота normalizer."""
     group = AssetGroup(
         asset_key="ИНВ-006",
         records=[make_rec(status=None, status_raw="Сломался насовсем")],
