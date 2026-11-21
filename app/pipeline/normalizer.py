@@ -46,7 +46,8 @@ def normalize_row(data: dict, ref: RowRef, rules: Rules, raw: dict) -> tuple[Nor
     location = clean_text(data.get("location"))
 
     for field, value in (("name", name), ("asset_type", type_raw),
-                         ("inventory_number", inventory_number)):
+                         ("inventory_number", inventory_number), ("location", location),
+                         ("responsible_person", responsible_person)):
         if not value:
             issues.append(Issue(refs=[ref], code=IssueCode.MISSING_FIELD, severity=Severity.MEDIUM,
                                 message=f"Поле {field} пустое", field=field))
@@ -70,27 +71,34 @@ def normalize_row(data: dict, ref: RowRef, rules: Rules, raw: dict) -> tuple[Nor
             message = f"Статус «{status_raw}» не распознан"
             if suggestion:
                 message += f". Возможно, имелось в виду: {suggestion}?"
-            issues.append(Issue(refs=[ref], code=IssueCode.INVALID_STATUS, severity=Severity.HIGH,
+            issues.append(Issue(refs=[ref], code=IssueCode.INVALID_STATUS, severity=Severity.MEDIUM,
                                 message=message,
                                 field="status",
                                 suggestion=suggestion))
 
     inv_num_pattern = rules.formats["inventory_number"]
     if inventory_number and not inv_num_pattern.match(inventory_number):
-        issues.append(Issue(refs=[ref], code=IssueCode.BAD_FORMAT, severity=Severity.HIGH,
+        issues.append(Issue(refs=[ref], code=IssueCode.BAD_FORMAT, severity=Severity.MEDIUM,
                             message=f"Инв. номер {inventory_number} не подходит по формату. Убедитесь в правильности написания инв. номера",
                             field="inventory_number"))
+
+    ip_pattern = rules.formats["ip_address"]
     serial_num_pattern = rules.formats["serial_number"]
-    if serial_number and not serial_num_pattern.match(serial_number):
-        issues.append(Issue(refs=[ref], code=IssueCode.BAD_FORMAT, severity=Severity.HIGH,
-                            message=f"Серийный номер {serial_number} не подходит по формату. Убедитесь в правильности написания серийного номера",
-                            field="serial_number"))
+    if serial_number:
+        if ip_pattern.match(serial_number):
+            issues.append(Issue(refs=[ref], code=IssueCode.BAD_FORMAT, severity=Severity.MEDIUM,
+                                message=f"В поле серийного номера указан IP-адрес: {serial_number}",
+                                field="serial_number"))
+        elif not serial_num_pattern.match(serial_number):
+            issues.append(Issue(refs=[ref], code=IssueCode.BAD_FORMAT, severity=Severity.MEDIUM,
+                                message=f"Серийный номер {serial_number} не подходит по формату. Убедитесь в правильности написания серийного номера",
+                                field="serial_number"))
 
 
     raw_date = clean_text(data.get("commissioning_date"))
     commissioning_date = parse_date(raw_date) if raw_date else None
     if raw_date and commissioning_date is None:
-        issues.append(Issue(refs=[ref], code=IssueCode.BAD_FORMAT, severity=Severity.HIGH,
+        issues.append(Issue(refs=[ref], code=IssueCode.BAD_FORMAT, severity=Severity.LOW,
                             message=f"Дата «{raw_date}» не распознана", field="commissioning_date"))
 
     record = NormalizedRecord(ref=ref,
