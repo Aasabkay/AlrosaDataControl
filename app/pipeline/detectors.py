@@ -33,10 +33,49 @@ def _detect_field_mismatch(group: AssetGroup) -> list[Issue]:
     return issues
 
 
-def run_detectors(groups: list[AssetGroup]) -> list[Issue]:
-    """Межгрупповые проверки. Проверки внутри одной строки живут в normalizer."""
+def _detect_missing_in_source(
+    group: AssetGroup,
+    expected_source_ids: set[int],
+) -> list[Issue]:
+    """Актив есть в одних источниках, но отсутствует в других.
+
+    Проверка включается только когда вызывающий явно передал список источников:
+    не каждый источник содержит полный перечень активов, поэтому по умолчанию
+    такие ошибки не создаются.
+    """
+    if not group.records:
+        return []
+
+    present = {r.ref.source_id for r in group.records}
+    missing = sorted(expected_source_ids - present)
+    if not missing:
+        return []
+
+    source_list = ", ".join(str(source_id) for source_id in missing)
+    return [
+        Issue(
+            code=IssueCode.MISSING_IN_SOURCE,
+            severity=Severity.MEDIUM,
+            message=f"Актив отсутствует в источниках: {source_list}",
+            refs=[r.ref for r in group.records],
+            asset_key=group.asset_key,
+        )
+    ]
+
+
+def run_detectors(
+    groups: list[AssetGroup],
+    expected_source_ids: set[int] | None = None,
+) -> list[Issue]:
+    """Межгрупповые проверки. Проверки внутри одной строки живут в normalizer.
+
+    expected_source_ids: источники, которые обязаны содержать все активы.
+    Если не передать — проверка MISSING_IN_SOURCE пропускается.
+    """
     issues: list[Issue] = []
     for group in groups:
         issues.extend(_detect_field_mismatch(group))
+        if expected_source_ids:
+            issues.extend(_detect_missing_in_source(group, expected_source_ids))
 
     return issues

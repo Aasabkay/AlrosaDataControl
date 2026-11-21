@@ -76,3 +76,21 @@ def test_pipeline_without_files():
     assert result.records == []
     assert result.groups == []
     assert result.issues == []
+
+
+def test_pipeline_reports_assets_missing_in_expected_source():
+    result = run_pipeline(
+        {
+            1: SAMPLE_DIR / "test_full_utf8.csv",
+            2: SAMPLE_DIR / "test_full_cp1251.csv",
+        },
+        expected_source_ids={1, 2, 3},
+    )
+
+    missing = [
+        issue for issue in result.issues
+        if issue.code == IssueCode.MISSING_IN_SOURCE
+    ]
+    assert len(result.groups) == 14
+    assert len(missing) == 14
+    assert all(issue.severity == Severity.MEDIUM for issue in missing)

@@ -13,11 +13,14 @@ def run_pipeline(
     files: dict[int, Path],
     batch_id: int = 1,
     rules: Rules | None = None,
+    expected_source_ids: set[int] | None = None,
 ) -> PipelineResult:
     """Полный прогон: разбор файлов → сопоставление → расхождения → сортировка.
 
     files: {source_id: путь к файлу}. source_id — номер источника,
     batch_id — номер загрузки (один прогон = одна загрузка).
+    expected_source_ids: источники, которые обязаны содержать все активы.
+    Если не передать — проверка MISSING_IN_SOURCE пропускается.
     """
     if rules is None:
         rules = load_rules()
@@ -35,7 +38,7 @@ def run_pipeline(
     groups: list[AssetGroup] = match_records(records)
 
     # 3. Ищем то, что видно только на уровне группы.
-    issues.extend(run_detectors(groups))
+    issues.extend(run_detectors(groups, expected_source_ids))
 
     # 4. Выстраиваем ошибки для отчёта: HIGH → MEDIUM → LOW.
     return PipelineResult(
@@ -49,10 +52,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Сверка ИТ-активов из CSV/XLSX")
     parser.add_argument("files", nargs="+", type=Path, help="файлы источников")
     parser.add_argument("--batch-id", type=int, default=1, help="номер загрузки")
+    parser.add_argument(
+        "--expected-source",
+        type=int,
+        action="append",
+        dest="expected_sources",
+        help="источник, который обязан содержать все активы (можно указать несколько раз)",
+    )
     args = parser.parse_args()
 
     files = {source_id: path for source_id, path in enumerate(args.files, start=1)}
-    result = run_pipeline(files, batch_id=args.batch_id)
+    expected = set(args.expected_sources) if args.expected_sources else None
+    result = run_pipeline(files, batch_id=args.batch_id, expected_source_ids=expected)
 
     print(f"Записей: {len(result.records)}")
     print(f"Групп:   {len(result.groups)}")

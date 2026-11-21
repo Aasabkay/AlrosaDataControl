@@ -102,3 +102,38 @@ def test_status_checks_are_normalizer_job():
         match_method=MatchMethod.INVENTORY_NUMBER,
     )
     assert run_detectors([group]) == []
+
+
+def test_missing_in_source_detected():
+    group = AssetGroup(
+        asset_key="ИНВ-007",
+        records=[make_rec(source_id=1)],
+        match_status=MatchStatus.ONLY_IN_SOURCE,
+        match_method=MatchMethod.INVENTORY_NUMBER,
+    )
+    issues = run_detectors([group], expected_source_ids={1, 2})
+
+    assert len(issues) == 1
+    assert issues[0].code == IssueCode.MISSING_IN_SOURCE
+    assert issues[0].asset_key == "ИНВ-007"
+    assert "2" in issues[0].message
+
+
+def test_missing_in_source_skipped_by_default():
+    group = AssetGroup(
+        asset_key="ИНВ-007",
+        records=[make_rec(source_id=1)],
+        match_status=MatchStatus.ONLY_IN_SOURCE,
+        match_method=MatchMethod.INVENTORY_NUMBER,
+    )
+    assert run_detectors([group]) == []
+
+
+def test_missing_in_source_when_everything_present():
+    group = AssetGroup(
+        asset_key="ИНВ-007",
+        records=[make_rec(source_id=1), make_rec(source_id=2)],
+        match_status=MatchStatus.MATCHED,
+        match_method=MatchMethod.INVENTORY_NUMBER,
+    )
+    assert run_detectors([group], expected_source_ids={1, 2}) == []
