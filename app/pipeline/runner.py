@@ -1,12 +1,21 @@
 import argparse
 from pathlib import Path
 
-from app.domain.schemas import AssetGroup, Issue, NormalizedRecord, ParseResult, PipelineResult
+from pydantic import BaseModel
+
+from app.domain.schemas import AssetGroup, Issue, NormalizedRecord, ParseResult
 from app.pipeline.classifier import classify_issues
 from app.pipeline.detectors import run_detectors
 from app.pipeline.matcher import match_records
 from app.pipeline.parser import parse_file
 from app.rules.loader import Rules, load_rules
+
+
+class PipelineResult(BaseModel):
+    """Итог полного прогона: что распознали, как сгруппировали и что нашли."""
+    records: list[NormalizedRecord]   # записи, прошедшие проверки
+    groups: list[AssetGroup]          # те же записи, склеенные в активы
+    issues: list[Issue]               # все ошибки, отсортированные по важности
 
 
 def run_pipeline(

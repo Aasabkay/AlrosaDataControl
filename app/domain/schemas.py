@@ -143,10 +143,3 @@ class Issue(BaseModel):
     def category(self) -> IssueCategory:
         return CODE_CATEGORY[self.code]
 
-
-class PipelineResult(BaseModel):
-    """Итог полного прогона: что распознали, как сгруппировали и что нашли."""
-    records: list[NormalizedRecord]   # записи, прошедшие проверки
-    groups: list[AssetGroup]          # те же записи, склеенные в активы
-    issues: list[Issue]               # все ошибки, отсортированные по важности
-
