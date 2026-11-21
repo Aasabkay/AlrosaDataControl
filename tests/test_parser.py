@@ -18,11 +18,11 @@ test_full_utf8_path = current_dir.parent / "sample_data" / "test_full_utf8.csv"
 test_empty_values_path = current_dir.parent / "sample_data" / "test_empty_values.xlsx"
 
 @pytest.mark.parametrize("path, source_id, batch_id, records, issues", [
-    (test_full_utf8_path,   1, 1, 14, 13),
-    (test_full_path,        2, 1, 14, 13),
-    (test_full_cp1251_path, 3, 1, 14, 13),
+    (test_full_utf8_path,   1, 1, 14, 16),
+    (test_full_path,        2, 1, 14, 16),
+    (test_full_cp1251_path, 3, 1, 14, 16),
     (case_sample_csv_path,  4, 1,  1,  4),
-    (test_empty_values_path, 5, 1, 13, 18)
+    (test_empty_values_path, 5, 1, 13, 21)
 ])
 def test_parser_result(rules, path, source_id, batch_id, records, issues):
     result = parse_file(path, source_id, batch_id, rules)
