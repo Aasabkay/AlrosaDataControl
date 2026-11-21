@@ -46,7 +46,8 @@ def normalize_row(data: dict, ref: RowRef, rules: Rules, raw: dict) -> tuple[Nor
     location = clean_text(data.get("location"))
 
     for field, value in (("name", name), ("asset_type", type_raw),
-                         ("inventory_number", inventory_number)):
+                         ("inventory_number", inventory_number), ("location", location),
+                         ("responsible_person", responsible_person)):
         if not value:
             issues.append(Issue(refs=[ref], code=IssueCode.MISSING_FIELD, severity=Severity.MEDIUM,
                                 message=f"Поле {field} пустое", field=field))
