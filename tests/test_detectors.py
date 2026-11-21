@@ -137,3 +137,32 @@ def test_missing_in_source_when_everything_present():
         match_method=MatchMethod.INVENTORY_NUMBER,
     )
     assert run_detectors([group], expected_source_ids={1, 2}) == []
+
+
+def test_cross_source_duplicate_detected():
+    group = AssetGroup(
+        asset_key="ПК-01",
+        records=[
+            make_rec(source_id=1, row=1),
+            make_rec(source_id=1, row=2),
+            make_rec(source_id=2, row=3),
+        ],
+        match_status=MatchStatus.MATCHED,
+        match_method=MatchMethod.FUZZY,
+    )
+    issues = run_detectors([group])
+
+    assert len(issues) == 1
+    assert issues[0].code == IssueCode.DUP_CROSS_SOURCE
+    assert len(issues[0].refs) == 2
+    assert "1" in issues[0].message
+
+
+def test_one_record_per_source_is_not_duplicate():
+    group = AssetGroup(
+        asset_key="ИНВ-007",
+        records=[make_rec(source_id=1), make_rec(source_id=2)],
+        match_status=MatchStatus.MATCHED,
+        match_method=MatchMethod.INVENTORY_NUMBER,
+    )
+    assert run_detectors([group]) == []

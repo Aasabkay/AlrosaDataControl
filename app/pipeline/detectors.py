@@ -33,6 +33,35 @@ def _detect_field_mismatch(group: AssetGroup) -> list[Issue]:
     return issues
 
 
+def _detect_cross_source_duplicates(group: AssetGroup) -> list[Issue]:
+    """Один источник дал несколько записей в одну группу — это дубль между источниками.
+
+    Внутри одного файла точные дубли и конфликты имён уже отсекает validators.
+    Сюда попадает то, что стало видно только после сопоставления: например, две
+    строки без номеров склеились в один актив по названию.
+    """
+    by_source: dict[int, list] = {}
+    for record in group.records:
+        by_source.setdefault(record.ref.source_id, []).append(record)
+
+    issues: list[Issue] = []
+    for source_id, records in by_source.items():
+        if len(records) < 2:
+            continue
+
+        rows = ", ".join(str(record.ref.row_number) for record in records)
+        issues.append(
+            Issue(
+                code=IssueCode.DUP_CROSS_SOURCE,
+                severity=Severity.MEDIUM,
+                message=f"Источник {source_id} дал несколько записей одного актива: строки {rows}",
+                refs=[record.ref for record in records],
+                asset_key=group.asset_key,
+            )
+        )
+    return issues
+
+
 def _detect_missing_in_source(
     group: AssetGroup,
     expected_source_ids: set[int],
@@ -75,6 +104,7 @@ def run_detectors(
     issues: list[Issue] = []
     for group in groups:
         issues.extend(_detect_field_mismatch(group))
+        issues.extend(_detect_cross_source_duplicates(group))
         if expected_source_ids:
             issues.extend(_detect_missing_in_source(group, expected_source_ids))
 
