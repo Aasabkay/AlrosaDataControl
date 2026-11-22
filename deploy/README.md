@@ -47,11 +47,6 @@ git clone https://github.com/Aasabkay/AlrosaDataControl.git alrosa
 cd alrosa
 ```
 
-> Репозиторий приватный: на сервере нужен доступ — либо
-> [personal access token](https://github.com/settings/tokens) в качестве пароля
-> (`git clone https://<token>@github.com/Aasabkay/AlrosaDataControl.git alrosa`),
-> либо deploy key, либо `scp` архива с локальной машины.
-
 ```bash
 cp deploy/.env.example deploy/.env
 nano deploy/.env          # ОБЯЗАТЕЛЬНО сменить DB_PASSWORD
