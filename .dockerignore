@@ -1,0 +1,10 @@
+# Что не нужно внутри образа API
+.git
+.venv
+venv
+frontend/node_modules
+frontend/dist
+.pytest_cache
+__pycache__
+*.pyc
+uploads
