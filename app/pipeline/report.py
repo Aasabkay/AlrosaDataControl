@@ -3,7 +3,7 @@ from datetime import date
 from pathlib import Path
 
 from openpyxl import Workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, Field
 
@@ -12,6 +12,7 @@ from app.domain.schemas import (
     Issue,
     IssueCategory,
     IssueCode,
+    MatchStatus,
     NormalizedRecord,
 )
 from app.pipeline.runner import PipelineResult
@@ -31,6 +32,7 @@ class ReportSummary(BaseModel):
     """Цифры для аналитической части и для заказчика."""
     assets_total: int
     assets_with_issues: int
+    ambiguous_assets: int
     issues_total: int
     excluded_rows: int        # уникальные строки, выброшенные из анализа
     duplicates: int           # группы дублей, внутри источника и между
@@ -60,6 +62,7 @@ class Report(BaseModel):
     summary: ReportSummary
     assets: list[AssetRow]
     issues: list[Issue]
+    recommendations: list[str] = Field(default_factory=list)
 
 
 def _first_value(records: list[NormalizedRecord], field_name: str):
@@ -144,6 +147,20 @@ def _fill_notes(
                 assets[index].notes.append(note)
 
 
+def _add_match_notes(assets: list[AssetRow], groups: list[AssetGroup]) -> None:
+    """Пометки про качество сопоставления: их не видно в Issue, но они важны."""
+    for asset, group in zip(assets, groups):
+        if group.match_status == MatchStatus.AMBIGUOUS:
+            note = "неоднозначное сопоставление"
+        elif group.match_status == MatchStatus.ONLY_IN_SOURCE:
+            note = "есть только в одном источнике"
+        else:
+            continue
+
+        if note not in asset.notes:
+            asset.notes.append(note)
+
+
 def _build_summary(result: PipelineResult, assets: list[AssetRow]) -> ReportSummary:
     by_category = Counter(issue.category for issue in result.issues)
     by_code = Counter(issue.code.value for issue in result.issues)
@@ -160,6 +177,10 @@ def _build_summary(result: PipelineResult, assets: list[AssetRow]) -> ReportSumm
     return ReportSummary(
         assets_total=len(assets),
         assets_with_issues=sum(1 for asset in assets if asset.notes),
+        ambiguous_assets=sum(
+            1 for group in result.groups
+            if group.match_status == MatchStatus.AMBIGUOUS
+        ),
         issues_total=len(result.issues),
         excluded_rows=len(_unique_refs(excluded)),
         duplicates=len(duplicates),
@@ -169,6 +190,35 @@ def _build_summary(result: PipelineResult, assets: list[AssetRow]) -> ReportSumm
     )
 
 
+def _build_recommendations(summary: ReportSummary) -> list[str]:
+    """Короткие выводы человеческим языком — их читает комиссия, а не программа."""
+    items: list[str] = []
+
+    if summary.mismatches:
+        items.append(
+            f"Расхождения между источниками: {summary.mismatches} — проверить вручную."
+        )
+    if summary.excluded_rows:
+        items.append(
+            f"Исключённые строки: {summary.excluded_rows} — разобрать причины."
+        )
+    if summary.duplicates:
+        items.append(f"Дубли: {summary.duplicates} — устранить.")
+    if summary.missing_or_status:
+        items.append(
+            f"Пропуски и некорректные статусы: {summary.missing_or_status} — заполнить или исправить."
+        )
+    if summary.ambiguous_assets:
+        items.append(
+            f"Неоднозначное сопоставление: {summary.ambiguous_assets} — подтвердить вручную."
+        )
+
+    if not items:
+        items.append("Существенных проблем не найдено.")
+
+    return items
+
+
 def build_report(result: PipelineResult, meta: ReportMeta) -> Report:
     """Собирает отчёт из результата прогона: шапка, таблица активов, цифры.
 
@@ -176,12 +226,16 @@ def build_report(result: PipelineResult, meta: ReportMeta) -> Report:
     """
     assets, maps = _build_assets(result.groups)
     _fill_notes(assets, result.issues, *maps)
+    _add_match_notes(assets, result.groups)
+
+    summary = _build_summary(result, assets)
 
     return Report(
         meta=meta,
-        summary=_build_summary(result, assets),
+        summary=summary,
         assets=assets,
         issues=list(result.issues),
+        recommendations=_build_recommendations(summary),
     )
 
 
@@ -198,11 +252,18 @@ def _format_date(value: date | None) -> str:
     return value.strftime("%d.%m.%Y") if value else "—"
 
 
+def _append_section(sheet, title: str, rows: list[tuple]) -> None:
+    sheet.append((title, ""))
+    sheet.cell(row=sheet.max_row, column=1).font = Font(bold=True)
+    for row in rows:
+        sheet.append(row)
+
+
 def _write_summary_sheet(sheet, report: Report) -> None:
     meta = report.meta
     summary = report.summary
 
-    rows = [
+    _append_section(sheet, "Шапка", [
         ("Организация", meta.organization),
         ("Ответственный", meta.responsible),
         ("Дата составления", _format_date(meta.generated_at)),
@@ -211,29 +272,36 @@ def _write_summary_sheet(sheet, report: Report) -> None:
             f"{_format_date(meta.period_start)} — {_format_date(meta.period_end)}",
         ),
         ("Комиссия", ", ".join(meta.commission) or "—"),
-        ("", ""),
-        ("Классификация ошибок", ""),
+    ])
+    sheet.append(("", ""))
+
+    _append_section(sheet, "Классификация ошибок", [
         ("Всего активов", summary.assets_total),
         ("Активов с замечаниями", summary.assets_with_issues),
+        ("Неоднозначное сопоставление", summary.ambiguous_assets),
         ("Всего ошибок", summary.issues_total),
         ("Исключено строк", summary.excluded_rows),
         ("Дублей", summary.duplicates),
         ("Пропуски и статусы", summary.missing_or_status),
         ("Расхождения", summary.mismatches),
-        ("", ""),
-        ("По кодам ошибок", ""),
-    ]
-    for row in rows:
-        sheet.append(row)
+    ])
+    sheet.append(("", ""))
 
-    for code, count in summary.by_code.items():
-        sheet.append((code, count))
+    _append_section(sheet, "По кодам ошибок", list(summary.by_code.items()))
+    sheet.append(("", ""))
 
-    sheet["A1"].font = Font(bold=True)
-    sheet["A7"].font = Font(bold=True)
-    sheet["A16"].font = Font(bold=True)
-    sheet.column_dimensions["A"].width = 28
-    sheet.column_dimensions["B"].width = 40
+    _append_section(
+        sheet,
+        "Выводы",
+        [(text, "") for text in report.recommendations],
+    )
+    first_recommendation = sheet.max_row - len(report.recommendations) + 1
+    for row in range(first_recommendation, sheet.max_row + 1):
+        sheet.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
+        sheet.cell(row=row, column=1).alignment = Alignment(wrap_text=True, vertical="top")
+
+    sheet.column_dimensions["A"].width = 32
+    sheet.column_dimensions["B"].width = 60
 
 
 def _write_assets_sheet(sheet, report: Report) -> None:
@@ -265,10 +333,18 @@ def _write_assets_sheet(sheet, report: Report) -> None:
     _set_widths(sheet, [30, 18, 22, 16, 18, 20, 30, 18, 24, 12, 45])
 
 
+def _format_values(issue: Issue) -> str:
+    """Показывает, что записано в каждом источнике — это и есть дифф."""
+    return "; ".join(
+        f"источник {value.ref.source_id}, строка {value.ref.row_number}: {value.value}"
+        for value in issue.values
+    )
+
+
 def _write_issues_sheet(sheet, report: Report) -> None:
     headers = [
-        "Категория", "Код", "Критичность", "Поле",
-        "Сообщение", "Строки", "Актив",
+        "Категория", "Код", "Критичность", "Поле", "Сообщение",
+        "Значения по источникам", "Подсказка", "Строки", "Актив",
     ]
     sheet.append(headers)
 
@@ -283,6 +359,8 @@ def _write_issues_sheet(sheet, report: Report) -> None:
             issue.severity.value,
             issue.field,
             issue.message,
+            _format_values(issue),
+            issue.suggestion,
             refs,
             issue.asset_key,
         ])
@@ -290,7 +368,7 @@ def _write_issues_sheet(sheet, report: Report) -> None:
     for cell in sheet[1]:
         cell.font = Font(bold=True)
     sheet.freeze_panes = "A2"
-    _set_widths(sheet, [18, 22, 12, 18, 60, 35, 20])
+    _set_widths(sheet, [18, 22, 12, 18, 55, 45, 30, 35, 20])
 
 
 def _set_widths(sheet, widths: list[int]) -> None:
