@@ -1,0 +1,405 @@
+/* Стили: спокойный «инструментальный» вид — как во внутренних админках.
+   Без градиентов, теней и декоративных элементов: только сетка, границы и типографика. */
+
+:root {
+  --bg: #f6f8fa;
+  --panel: #ffffff;
+  --border: #d0d7de;
+  --text: #1f2328;
+  --muted: #59636e;
+  --accent: #0969da;
+  --danger: #cf222e;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font: 14px/1.5 -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+h1, h2, h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* Шапка */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 24px;
+  background: #24292f;
+  color: #ffffff;
+}
+
+.app-header h1 {
+  font-size: 15px;
+}
+
+.app-header .subtitle {
+  color: #9ea7b3;
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+.tabs {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.tabs button {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #d0d7de;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tabs button:hover {
+  background: #30363d;
+}
+
+.tabs button.active {
+  background: #30363d;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Контент */
+main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px 24px 48px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+  font-size: 13px;
+}
+
+.panel-body {
+  padding: 14px 16px;
+}
+
+.two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Счётчики дашборда */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.stat .label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.stat .value {
+  font-size: 22px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.stat.clean .value {
+  color: #1a7f37;
+}
+
+/* Диаграмма по кодам */
+.bar-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 40px;
+  gap: 10px;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.bar-track {
+  height: 14px;
+  background: #eaeef2;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.bar-count {
+  text-align: right;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Таблицы */
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data th,
+.data td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.data th {
+  background: #f6f8fa;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.data tbody tr.clickable {
+  cursor: pointer;
+}
+
+.data tbody tr.clickable:hover td,
+.data tbody tr.selected td {
+  background: #ddf4ff;
+}
+
+/* Бейджи и моноширинный текст */
+.badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge.bad {
+  background: #ffebe9;
+  color: var(--danger);
+}
+
+.badge.warn {
+  background: #fff8c5;
+  color: #9a6700;
+}
+
+.badge.muted {
+  background: #f6f8fa;
+  color: var(--muted);
+}
+
+code.mono {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: #f6f8fa;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+/* Значения по источникам (дифф) */
+.diff-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.diff-list li {
+  padding: 2px 0;
+  border-bottom: 1px dashed #eaeef2;
+}
+
+.diff-list li:last-child {
+  border-bottom: 0;
+}
+
+/* Формы и фильтры */
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+select,
+input[type='text'] {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.upload-form {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.upload-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+button.primary {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+button.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+a.button-like {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+a.button-like.secondary {
+  background: #ffffff;
+  color: var(--accent);
+}
+
+/* Ключ-значение */
+.kv {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.kv-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px dashed #eaeef2;
+}
+
+.kv-row dt {
+  color: var(--muted);
+}
+
+.kv-row dd {
+  margin: 0;
+}
+
+.sub-title {
+  font-size: 13px;
+  margin: 16px 0 8px;
+}
+
+.plain-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.plain-list li {
+  margin: 4px 0;
+}
+
+/* Служебные состояния */
+.error-note {
+  padding: 8px 12px;
+  border: 1px solid #ffc1bd;
+  border-radius: 6px;
+  background: #ffebe9;
+  color: var(--danger);
+  margin-bottom: 12px;
+}
+
+.success-note {
+  padding: 8px 12px;
+  border: 1px solid #a5e5b7;
+  border-radius: 6px;
+  background: #dafbe1;
+  margin-bottom: 12px;
+}
+
+.footnote {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .two-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .app-header {
+    flex-wrap: wrap;
+  }
+
+  .tabs {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+}

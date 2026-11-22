@@ -6,6 +6,7 @@
         --json report.json --xlsx report.xlsx
 """
 import argparse
+from datetime import date
 from pathlib import Path
 
 from app.pipeline.report import (
@@ -22,16 +23,42 @@ def main() -> None:
     parser.add_argument("files", nargs="+", type=Path, help="файлы источников")
     parser.add_argument("--organization", default="", help="название организации")
     parser.add_argument("--responsible", default="", help="ответственный за сверку")
+    parser.add_argument("--period-start", type=date.fromisoformat, help="начало периода, ГГГГ-ММ-ДД")
+    parser.add_argument("--period-end", type=date.fromisoformat, help="конец периода, ГГГГ-ММ-ДД")
+    parser.add_argument(
+        "--commission",
+        action="append",
+        default=[],
+        help="член комиссии (можно указать несколько раз)",
+    )
+    parser.add_argument(
+        "--expected-source",
+        type=int,
+        action="append",
+        dest="expected_sources",
+        help="источник, который обязан содержать все активы (можно указать несколько раз)",
+    )
     parser.add_argument("--batch-id", type=int, default=1, help="номер загрузки")
     parser.add_argument("--json", type=Path, dest="json_path", help="куда сохранить JSON")
     parser.add_argument("--xlsx", type=Path, dest="xlsx_path", help="куда сохранить Excel")
     args = parser.parse_args()
 
     files = {source_id: path for source_id, path in enumerate(args.files, start=1)}
-    result = run_pipeline(files, batch_id=args.batch_id)
+    expected = set(args.expected_sources) if args.expected_sources else None
+    result = run_pipeline(
+        files,
+        batch_id=args.batch_id,
+        expected_source_ids=expected,
+    )
     report = build_report(
         result,
-        ReportMeta(organization=args.organization, responsible=args.responsible),
+        ReportMeta(
+            organization=args.organization,
+            responsible=args.responsible,
+            period_start=args.period_start,
+            period_end=args.period_end,
+            commission=args.commission,
+        ),
     )
 
     if args.json_path:

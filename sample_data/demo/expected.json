@@ -1,0 +1,36 @@
+{
+  "summary": {
+    "assets_total": 20,
+    "assets_with_issues": 13,
+    "ambiguous_assets": 0,
+    "issues_total": 17,
+    "excluded_rows": 6,
+    "duplicates": 1,
+    "missing_or_status": 8,
+    "mismatches": 4,
+    "by_code": {
+      "BAD_COLUMN_COUNT": 2,
+      "BAD_FORMAT": 3,
+      "DUP_IN_SOURCE": 1,
+      "FIELD_MISMATCH": 3,
+      "INVALID_ASSET_TYPE": 1,
+      "INVALID_STATUS": 1,
+      "INVENTORY_CONFLICT": 1,
+      "MISSING_FIELD": 3,
+      "MISSING_IN_SOURCE": 1,
+      "NAME_CONFLICT": 1
+    }
+  },
+  "by_code": {
+    "BAD_COLUMN_COUNT": 2,
+    "BAD_FORMAT": 3,
+    "DUP_IN_SOURCE": 1,
+    "FIELD_MISMATCH": 3,
+    "INVALID_ASSET_TYPE": 1,
+    "INVALID_STATUS": 1,
+    "INVENTORY_CONFLICT": 1,
+    "MISSING_FIELD": 3,
+    "MISSING_IN_SOURCE": 1,
+    "NAME_CONFLICT": 1
+  }
+}
