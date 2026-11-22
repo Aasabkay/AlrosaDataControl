@@ -1,4 +1,5 @@
-from app.domain.schemas import AssetGroup, FieldValue, Issue, IssueCode, Severity
+from app.domain.schemas import (AssetGroup, FieldValue, Issue, IssueCode,
+                                NormalizedRecord, Severity)
 
 # Поля, которые сравниваем между источниками внутри одной группы.
 COMPARED_FIELDS = ("status", "location", "responsible_person")
@@ -40,7 +41,7 @@ def _detect_cross_source_duplicates(group: AssetGroup) -> list[Issue]:
     Сюда попадает то, что стало видно только после сопоставления: например, две
     строки без номеров склеились в один актив по названию.
     """
-    by_source: dict[int, list] = {}
+    by_source: dict[int, list[NormalizedRecord]] = {}
     for record in group.records:
         by_source.setdefault(record.ref.source_id, []).append(record)
 
