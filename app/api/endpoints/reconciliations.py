@@ -9,6 +9,7 @@ from starlette import status
 from app.api.dependencies import sessionDepends
 from app.api.schemas import (ReconciliationInputSchema,
                              ReconciliationOutputSchema)
+from app.config import REPORT_ORGANIZATION, REPORT_RESPONSIBLE
 from app.database.models import ReconciliationRun
 from app.database.repositories.reconciliations import (create_run, get_run,
                                                        group_from_db,
@@ -100,7 +101,11 @@ async def _load_report(session, run_id: int) -> Report:
         groups=groups,
         issues=classify_issues(issues),
     )
-    return build_report(result, ReportMeta(generated_at=run.started_at.date()))
+    return build_report(result, ReportMeta(
+        organization=REPORT_ORGANIZATION,
+        responsible=REPORT_RESPONSIBLE,
+        generated_at=run.started_at.date(),
+    ))
 
 
 @reconciliations_router.get("/", status_code=status.HTTP_200_OK,

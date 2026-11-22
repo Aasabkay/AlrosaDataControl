@@ -1,6 +1,9 @@
 // Единая точка обращения к API. Базовый адрес берётся из переменной
 // окружения VITE_API_URL, чтобы фронт работал и с моком, и с настоящим API.
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+// В прод-сборке по умолчанию пусто: фронт и API живут на одном домене,
+// запросы идут на свой origin и их проксирует nginx.
+const BASE_URL =
+  import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
 async function request(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, options)

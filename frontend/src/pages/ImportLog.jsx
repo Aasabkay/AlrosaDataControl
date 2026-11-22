@@ -12,32 +12,40 @@ import { useApi } from '../hooks/useApi'
 // Журнал импорта: сводка по загрузке и таблица строк
 // (принята / отбракована, причина отбраковки — код ошибки).
 export default function ImportLog({ initialImportId }) {
-  const { data: sources, loading: sourcesLoading, error: sourcesError } = useApi('/sources')
+  const { data: batches, loading: batchesLoading, error: batchesError } = useApi('/imports/')
+  const { data: sources } = useApi('/sources/')
 
   const [importId, setImportId] = useState(initialImportId ?? null)
-  const selectedId = importId ?? (sources && sources.length ? sources[0].id : null)
+  const selectedId = importId ?? (batches && batches.length ? batches[0].id : null)
 
   const { data: batch } = useApi(selectedId ? `/imports/${selectedId}` : null)
   const { data: log } = useApi(selectedId ? `/imports/${selectedId}/log` : null)
 
-  if (sourcesLoading) return <Loading />
-  if (sourcesError) return <ErrorNote message={sourcesError} />
+  if (batchesLoading) return <Loading />
+  if (batchesError) return <ErrorNote message={batchesError} />
+
+  const sourceName = (sourceId) => {
+    const source = sources?.find((item) => item.id === sourceId)
+    return source ? source.name : `источник ${sourceId}`
+  }
 
   return (
     <>
       <Panel
         title="Журнал импорта"
         actions={
-          <select
-            value={selectedId ?? ''}
-            onChange={(event) => setImportId(Number(event.target.value))}
-          >
-            {sources.map((source) => (
-              <option key={source.id} value={source.id}>
-                {source.id} — {source.name}
-              </option>
-            ))}
-          </select>
+          batches && batches.length > 0 ? (
+            <select
+              value={selectedId ?? ''}
+              onChange={(event) => setImportId(Number(event.target.value))}
+            >
+              {batches.map((item) => (
+                <option key={item.id} value={item.id}>
+                  №{item.id} — {item.filename} ({sourceName(item.source_id)})
+                </option>
+              ))}
+            </select>
+          ) : null
         }
       >
         {!selectedId && <Empty>Загрузок пока нет.</Empty>}
@@ -45,8 +53,16 @@ export default function ImportLog({ initialImportId }) {
         {batch && (
           <dl className="kv">
             <div className="kv-row">
+              <dt>Источник</dt>
+              <dd>{sourceName(batch.source_id)}</dd>
+            </div>
+            <div className="kv-row">
               <dt>Файл</dt>
               <dd>{batch.filename}</dd>
+            </div>
+            <div className="kv-row">
+              <dt>Загружен</dt>
+              <dd>{new Date(batch.uploaded_at).toLocaleString('ru-RU')}</dd>
             </div>
             <div className="kv-row">
               <dt>Строк всего</dt>

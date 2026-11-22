@@ -94,6 +94,16 @@ async def list_sources(session: AsyncSession) -> list[Source]:
 
     return sources.scalars().all()
 
+async def list_batches(session: AsyncSession) -> list[ImportBatch]:
+    """Все загрузки, свежие первыми. Нужны для журнала импорта и запуска сверки."""
+    query = (select(ImportBatch).options(selectinload(ImportBatch.raw_rows))
+             .order_by(ImportBatch.id.desc()))
+
+    result = await session.execute(query)
+
+    return result.scalars().all()
+
+
 async def get_batch(session: AsyncSession, batch_id: int) -> ImportBatch | None:
     query = (select(ImportBatch).where(ImportBatch.id == batch_id)
              .options(selectinload(ImportBatch.raw_rows)))

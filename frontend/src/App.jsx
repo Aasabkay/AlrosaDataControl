@@ -54,7 +54,9 @@ export default function App() {
 
       <main>
         {tab === 'dashboard' && <Dashboard />}
-        {tab === 'upload' && <Upload onOpenLog={openLog} />}
+        {tab === 'upload' && (
+          <Upload onOpenLog={openLog} onOpenDashboard={() => setTab('dashboard')} />
+        )}
         {tab === 'log' && <ImportLog key={logImportId} initialImportId={logImportId} />}
         {tab === 'issues' && <Issues onOpenAsset={openAsset} />}
         {tab === 'assets' && <Assets selectedAssetKey={assetKey} />}

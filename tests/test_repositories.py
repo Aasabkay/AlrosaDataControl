@@ -8,7 +8,7 @@ from sqlalchemy.pool import NullPool
 
 from app.config import DB_URL
 from app.database.models import RawRow, SourceRecord, Issue, Source
-from app.database.repositories.imports import create_source, create_batch, save_import
+from app.database.repositories.imports import create_source, create_batch, save_import, list_batches
 from app.database.repositories.rules import load_rules_from_db
 from app.pipeline.parser import parse_file
 
@@ -60,3 +60,16 @@ async def test_save_import(session):
         select(Issue).where(Issue.batch_id == batch.id)
     )).scalars()}
     assert codes == {"BAD_COLUMN_COUNT", "INVALID_STATUS"}
+
+
+async def test_list_batches_newest_first(session):
+    source = await create_source(session, Source(name="Журнал импорта (тест)"))
+    first = await create_batch(session, source.id, "first.csv", "uuid-first")
+    second = await create_batch(session, source.id, "second.csv", "uuid-second")
+
+    batches = await list_batches(session)
+    ids = [batch.id for batch in batches]
+
+    assert first.id in ids and second.id in ids
+    # Свежие загрузки идут первыми: журнал и «последняя загрузка на источник» зависят от этого.
+    assert ids.index(second.id) < ids.index(first.id)

@@ -11,7 +11,7 @@ from app.api.dependencies import sessionDepends
 from app.api.schemas import ImportOutputSchema, GetImportsBatchSchema, GetImportsLogsSchema, GetImportsIssuesSchema
 from app.config import UPLOAD_DIR
 from app.database.repositories.imports import list_sources, create_batch, save_import, get_batch, get_import_log, \
-    get_batch_issues
+    get_batch_issues, list_batches
 from app.database.repositories.rules import load_rules_from_db
 from app.pipeline.parser import parse_file
 
@@ -69,16 +69,8 @@ async def import_file(session: sessionDepends , file: UploadFile, source_id: int
                               records_accepted=counts["records_accepted"],
                               issues_count=counts["issues_count"])
 
-@imports_router.get("/{batch_id}", summary="Сводка по загрузке", status_code=status.HTTP_200_OK)
-async def get_import_batch(session: sessionDepends, batch_id: int) -> GetImportsBatchSchema:
-    batch = await get_batch(session, batch_id)
-
-    if batch is None:
-        raise HTTPException(status_code=404, detail=f"Файл с batch_id: {batch_id} не найден")
-
-    accepted = len([row.row_number for row in batch.raw_rows if row.status == "accepted"])
-
-    rejected = len(batch.raw_rows) - accepted
+def _batch_schema(batch) -> GetImportsBatchSchema:
+    accepted = sum(1 for row in batch.raw_rows if row.status == "accepted")
 
     return GetImportsBatchSchema(id=batch.id,
                                  source_id=batch.source_id,
@@ -87,7 +79,23 @@ async def get_import_batch(session: sessionDepends, batch_id: int) -> GetImports
                                  uploaded_at=batch.uploaded_at,
                                  rows_total=len(batch.raw_rows),
                                  accepted=accepted,
-                                 rejected=rejected)
+                                 rejected=len(batch.raw_rows) - accepted)
+
+
+@imports_router.get("/", summary="Список загрузок (свежие первыми)", status_code=status.HTTP_200_OK)
+async def get_import_batches(session: sessionDepends) -> list[GetImportsBatchSchema]:
+    batches = await list_batches(session)
+
+    return [_batch_schema(batch) for batch in batches]
+
+@imports_router.get("/{batch_id}", summary="Сводка по загрузке", status_code=status.HTTP_200_OK)
+async def get_import_batch(session: sessionDepends, batch_id: int) -> GetImportsBatchSchema:
+    batch = await get_batch(session, batch_id)
+
+    if batch is None:
+        raise HTTPException(status_code=404, detail=f"Файл с batch_id: {batch_id} не найден")
+
+    return _batch_schema(batch)
 
 @imports_router.get("/{batch_id}/log", summary="Журнал загрузки", status_code=status.HTTP_200_OK)
 async def get_batch_log(session: sessionDepends, batch_id: int) -> list[GetImportsLogsSchema]:

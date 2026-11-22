@@ -8,7 +8,7 @@ export default function Dashboard() {
   const { data: report, loading, error } = useApi(
     runId ? `/reconciliations/${runId}` : null
   )
-  const { data: sources } = useApi('/sources')
+  const { data: sources } = useApi('/sources/')
 
   if (runLoading || loading) return <Loading />
   if (runError || error) return <ErrorNote message={runError ?? error} />
