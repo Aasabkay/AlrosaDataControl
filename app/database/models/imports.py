@@ -26,6 +26,7 @@ class ImportBatch(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     source_id: Mapped[int] = mapped_column(ForeignKey("source.id"))
     filename: Mapped[str] = mapped_column(String(500))
+    file_uuid: Mapped[str] = mapped_column(String(500))
     uploaded_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     source: Mapped[Source] = relationship(back_populates="batches")
