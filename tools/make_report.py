@@ -31,13 +31,25 @@ def main() -> None:
         default=[],
         help="член комиссии (можно указать несколько раз)",
     )
+    parser.add_argument(
+        "--expected-source",
+        type=int,
+        action="append",
+        dest="expected_sources",
+        help="источник, который обязан содержать все активы (можно указать несколько раз)",
+    )
     parser.add_argument("--batch-id", type=int, default=1, help="номер загрузки")
     parser.add_argument("--json", type=Path, dest="json_path", help="куда сохранить JSON")
     parser.add_argument("--xlsx", type=Path, dest="xlsx_path", help="куда сохранить Excel")
     args = parser.parse_args()
 
     files = {source_id: path for source_id, path in enumerate(args.files, start=1)}
-    result = run_pipeline(files, batch_id=args.batch_id)
+    expected = set(args.expected_sources) if args.expected_sources else None
+    result = run_pipeline(
+        files,
+        batch_id=args.batch_id,
+        expected_source_ids=expected,
+    )
     report = build_report(
         result,
         ReportMeta(
