@@ -41,6 +41,16 @@ def test_clean_group_has_no_issues():
     assert run_detectors([group]) == []
 
 
+def test_single_record_group_has_no_issues():
+    group = AssetGroup(
+        asset_key="ИНВ-001",
+        records=[make_rec()],
+        match_status=MatchStatus.ONLY_IN_SOURCE,
+        match_method=MatchMethod.INVENTORY_NUMBER,
+    )
+    assert run_detectors([group]) == []
+
+
 def test_field_mismatch_detected():
     group = AssetGroup(
         asset_key="ИНВ-001",
@@ -58,53 +68,101 @@ def test_field_mismatch_detected():
     assert len(issues[0].values) == 2
 
 
-def test_invalid_status_detected():
+def test_empty_value_is_not_a_mismatch():
+    """Пустая строка не считается значением: её ловит проверка пропусков."""
     group = AssetGroup(
-        asset_key="ИНВ-002",
+        asset_key="ИНВ-001",
+        records=[
+            make_rec(source_id=1, status=""),
+            make_rec(source_id=2, status="В эксплуатации"),
+        ],
+        match_status=MatchStatus.MATCHED,
+        match_method=MatchMethod.INVENTORY_NUMBER,
+    )
+    assert run_detectors([group]) == []
+
+
+def test_missing_fields_are_normalizer_job():
+    """Пропуски полей проверяет normalizer, детекторы их не дублируют."""
+    group = AssetGroup(
+        asset_key="ИНВ-004",
+        records=[make_rec(location=None, responsible_person=None)],
+        match_status=MatchStatus.ONLY_IN_SOURCE,
+        match_method=MatchMethod.INVENTORY_NUMBER,
+    )
+    assert run_detectors([group]) == []
+
+
+def test_status_checks_are_normalizer_job():
+    """Невалидный статус и его формат — тоже забота normalizer."""
+    group = AssetGroup(
+        asset_key="ИНВ-006",
         records=[make_rec(status=None, status_raw="Сломался насовсем")],
         match_status=MatchStatus.ONLY_IN_SOURCE,
         match_method=MatchMethod.INVENTORY_NUMBER,
     )
-    issues = run_detectors([group])
-    assert len(issues) == 1
-    assert issues[0].code == IssueCode.INVALID_STATUS
-    assert issues[0].values[0].value == "Сломался насовсем"
+    assert run_detectors([group]) == []
 
 
-def test_bad_format_ip_in_serial():
+def test_missing_in_source_detected():
     group = AssetGroup(
-        asset_key="ИНВ-003",
-        records=[make_rec(serial="192.168.1.10")],
+        asset_key="ИНВ-007",
+        records=[make_rec(source_id=1)],
         match_status=MatchStatus.ONLY_IN_SOURCE,
         match_method=MatchMethod.INVENTORY_NUMBER,
     )
-    issues = run_detectors([group])
+    issues = run_detectors([group], expected_source_ids={1, 2})
+
     assert len(issues) == 1
-    assert issues[0].code == IssueCode.BAD_FORMAT
-    assert issues[0].field == "serial_number"
+    assert issues[0].code == IssueCode.MISSING_IN_SOURCE
+    assert issues[0].asset_key == "ИНВ-007"
+    assert "2" in issues[0].message
 
 
-def test_bad_format_inventory_number():
+def test_missing_in_source_skipped_by_default():
     group = AssetGroup(
-        asset_key="12345",
-        records=[make_rec(inv="12345")],
+        asset_key="ИНВ-007",
+        records=[make_rec(source_id=1)],
         match_status=MatchStatus.ONLY_IN_SOURCE,
         match_method=MatchMethod.INVENTORY_NUMBER,
     )
-    issues = run_detectors([group])
-    assert len(issues) == 1
-    assert issues[0].code == IssueCode.BAD_FORMAT
-    assert issues[0].field == "inventory_number"
+    assert run_detectors([group]) == []
 
 
-def test_missing_fields_detected():
+def test_missing_in_source_when_everything_present():
     group = AssetGroup(
-        asset_key="ИНВ-004",
-        records=[make_rec(status=None, status_raw=None, location=None)],
-        match_status=MatchStatus.ONLY_IN_SOURCE,
+        asset_key="ИНВ-007",
+        records=[make_rec(source_id=1), make_rec(source_id=2)],
+        match_status=MatchStatus.MATCHED,
         match_method=MatchMethod.INVENTORY_NUMBER,
     )
+    assert run_detectors([group], expected_source_ids={1, 2}) == []
+
+
+def test_cross_source_duplicate_detected():
+    group = AssetGroup(
+        asset_key="ПК-01",
+        records=[
+            make_rec(source_id=1, row=1),
+            make_rec(source_id=1, row=2),
+            make_rec(source_id=2, row=3),
+        ],
+        match_status=MatchStatus.MATCHED,
+        match_method=MatchMethod.FUZZY,
+    )
     issues = run_detectors([group])
-    assert len(issues) == 2
-    assert {i.code for i in issues} == {IssueCode.MISSING_FIELD}
-    assert {i.field for i in issues} == {"status", "location"}
+
+    assert len(issues) == 1
+    assert issues[0].code == IssueCode.DUP_CROSS_SOURCE
+    assert len(issues[0].refs) == 2
+    assert "1" in issues[0].message
+
+
+def test_one_record_per_source_is_not_duplicate():
+    group = AssetGroup(
+        asset_key="ИНВ-007",
+        records=[make_rec(source_id=1), make_rec(source_id=2)],
+        match_status=MatchStatus.MATCHED,
+        match_method=MatchMethod.INVENTORY_NUMBER,
+    )
+    assert run_detectors([group]) == []

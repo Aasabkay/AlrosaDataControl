@@ -1,8 +1,7 @@
 from app.domain.schemas import AssetGroup, FieldValue, Issue, IssueCode, Severity
-from app.rules.loader import Rules, load_rules
 
+# Поля, которые сравниваем между источниками внутри одной группы.
 COMPARED_FIELDS = ("status", "location", "responsible_person")
-REQUIRED_FIELDS = ("location", "responsible_person")
 
 
 def _detect_field_mismatch(group: AssetGroup) -> list[Issue]:
@@ -14,7 +13,7 @@ def _detect_field_mismatch(group: AssetGroup) -> list[Issue]:
         unique_values = {
             getattr(r, field_name)
             for r in group.records
-            if getattr(r, field_name) is not None
+            if getattr(r, field_name)
         }
         if len(unique_values) > 1:
             issues.append(
@@ -34,112 +33,79 @@ def _detect_field_mismatch(group: AssetGroup) -> list[Issue]:
     return issues
 
 
-def _detect_invalid_status(group: AssetGroup) -> list[Issue]:
+def _detect_cross_source_duplicates(group: AssetGroup) -> list[Issue]:
+    """Один источник дал несколько записей в одну группу — это дубль между источниками.
+
+    Внутри одного файла точные дубли и конфликты имён уже отсекает validators.
+    Сюда попадает то, что стало видно только после сопоставления: например, две
+    строки без номеров склеились в один актив по названию.
+    """
+    by_source: dict[int, list] = {}
+    for record in group.records:
+        by_source.setdefault(record.ref.source_id, []).append(record)
+
     issues: list[Issue] = []
-    for r in group.records:
-        if r.status is None and r.status_raw:
-            issues.append(
-                Issue(
-                    code=IssueCode.INVALID_STATUS,
-                    severity=Severity.MEDIUM,
-                    message=f"Неизвестный статус: '{r.status_raw}'",
-                    refs=[r.ref],
-                    asset_key=group.asset_key,
-                    field="status",
-                    values=[FieldValue(ref=r.ref, value=r.status_raw)],
-                )
+    for source_id, records in by_source.items():
+        if len(records) < 2:
+            continue
+
+        rows = ", ".join(str(record.ref.row_number) for record in records)
+        issues.append(
+            Issue(
+                code=IssueCode.DUP_CROSS_SOURCE,
+                severity=Severity.MEDIUM,
+                message=f"Источник {source_id} дал несколько записей одного актива: строки {rows}",
+                refs=[record.ref for record in records],
+                asset_key=group.asset_key,
             )
+        )
     return issues
 
 
-def _detect_bad_format(group: AssetGroup, rules: Rules) -> list[Issue]:
-    issues: list[Issue] = []
-    ip_pattern = rules.formats["ip_address"]
-    serial_pattern = rules.formats["serial_number"]
-    inv_pattern = rules.formats["inventory_number"]
+def _detect_missing_in_source(
+    group: AssetGroup,
+    expected_source_ids: set[int],
+) -> list[Issue]:
+    """Актив есть в одних источниках, но отсутствует в других.
 
-    for r in group.records:
-        if r.serial_number:
-            if ip_pattern.match(r.serial_number):
-                issues.append(
-                    Issue(
-                        code=IssueCode.BAD_FORMAT,
-                        severity=Severity.MEDIUM,
-                        message=f"В поле серийного номера указан IP-адрес: '{r.serial_number}'",
-                        refs=[r.ref],
-                        asset_key=group.asset_key,
-                        field="serial_number",
-                        values=[FieldValue(ref=r.ref, value=r.serial_number)],
-                    )
-                )
-            elif not serial_pattern.match(r.serial_number):
-                issues.append(
-                    Issue(
-                        code=IssueCode.BAD_FORMAT,
-                        severity=Severity.LOW,
-                        message=f"Неверный формат серийного номера: '{r.serial_number}'",
-                        refs=[r.ref],
-                        asset_key=group.asset_key,
-                        field="serial_number",
-                        values=[FieldValue(ref=r.ref, value=r.serial_number)],
-                    )
-                )
+    Проверка включается только когда вызывающий явно передал список источников:
+    не каждый источник содержит полный перечень активов, поэтому по умолчанию
+    такие ошибки не создаются.
+    """
+    if not group.records:
+        return []
 
-        if r.inventory_number and not inv_pattern.match(r.inventory_number):
-            issues.append(
-                Issue(
-                    code=IssueCode.BAD_FORMAT,
-                    severity=Severity.LOW,
-                    message=f"Неверный формат инвентарного номера: '{r.inventory_number}'",
-                    refs=[r.ref],
-                    asset_key=group.asset_key,
-                    field="inventory_number",
-                    values=[FieldValue(ref=r.ref, value=r.inventory_number)],
-                )
-            )
+    present = {r.ref.source_id for r in group.records}
+    missing = sorted(expected_source_ids - present)
+    if not missing:
+        return []
 
-    return issues
+    source_list = ", ".join(str(source_id) for source_id in missing)
+    return [
+        Issue(
+            code=IssueCode.MISSING_IN_SOURCE,
+            severity=Severity.MEDIUM,
+            message=f"Актив отсутствует в источниках: {source_list}",
+            refs=[r.ref for r in group.records],
+            asset_key=group.asset_key,
+        )
+    ]
 
 
-def _detect_missing_fields(group: AssetGroup) -> list[Issue]:
-    issues: list[Issue] = []
-    for r in group.records:
-        if r.status is None and not r.status_raw:
-            issues.append(
-                Issue(
-                    code=IssueCode.MISSING_FIELD,
-                    severity=Severity.LOW,
-                    message="Не заполнено обязательное поле 'status'",
-                    refs=[r.ref],
-                    asset_key=group.asset_key,
-                    field="status",
-                )
-            )
+def run_detectors(
+    groups: list[AssetGroup],
+    expected_source_ids: set[int] | None = None,
+) -> list[Issue]:
+    """Межгрупповые проверки. Проверки внутри одной строки живут в normalizer.
 
-        for field_name in REQUIRED_FIELDS:
-            if getattr(r, field_name) is None:
-                issues.append(
-                    Issue(
-                        code=IssueCode.MISSING_FIELD,
-                        severity=Severity.LOW,
-                        message=f"Не заполнено обязательное поле '{field_name}'",
-                        refs=[r.ref],
-                        asset_key=group.asset_key,
-                        field=field_name,
-                    )
-                )
-    return issues
-
-
-def run_detectors(groups: list[AssetGroup], rules: Rules | None = None) -> list[Issue]:
-    if rules is None:
-        rules = load_rules()
-
+    expected_source_ids: источники, которые обязаны содержать все активы.
+    Если не передать — проверка MISSING_IN_SOURCE пропускается.
+    """
     issues: list[Issue] = []
     for group in groups:
         issues.extend(_detect_field_mismatch(group))
-        issues.extend(_detect_invalid_status(group))
-        issues.extend(_detect_bad_format(group, rules))
-        issues.extend(_detect_missing_fields(group))
+        issues.extend(_detect_cross_source_duplicates(group))
+        if expected_source_ids:
+            issues.extend(_detect_missing_in_source(group, expected_source_ids))
 
     return issues

@@ -1,105 +1,146 @@
-from rapidfuzz import process, fuzz
-from app.domain.schemas import NormalizedRecord, AssetGroup, MatchStatus, MatchMethod
+from app.domain.schemas import (
+    MatchMethod,
+    MatchStatus,
+    NormalizedRecord,
+    RowRef,
+)
+from app.pipeline.matcher import match_records
 
-def match_records(records: list[NormalizedRecord]) -> list[AssetGroup]:
-    groups: list[AssetGroup] = []
-    name_to_invs = {}
-    for r in records:
-        if r.name and r.inventory_number:
-            name_to_invs.setdefault(r.name, set()).add(r.inventory_number)
 
-    valid_records = []
-    for r in records:
-        if r.name and len(name_to_invs.get(r.name, set())) > 1:
-            continue
-        valid_records.append(r)
+def make_rec(
+    source_id: int = 1,
+    row: int = 1,
+    name: str | None = None,
+    inv: str | None = None,
+    serial: str | None = None,
+) -> NormalizedRecord:
+    return NormalizedRecord(
+        ref=RowRef(source_id=source_id, batch_id=1, row_number=row),
+        name=name,
+        inventory_number=inv,
+        serial_number=serial,
+    )
 
-    unmatched = valid_records.copy()
 
-    def determine_status(matched_recs: list[NormalizedRecord]) -> MatchStatus:
-        unique_sources = {r.ref.source_id for r in matched_recs}
-        return MatchStatus.MATCHED if len(unique_sources) > 1 else MatchStatus.ONLY_IN_SOURCE
+def test_match_by_inventory_number_across_sources():
+    groups = match_records([
+        make_rec(1, 1, name="ПК-01", inv="ИНВ-001"),
+        make_rec(2, 2, name="ПК-01", inv="ИНВ-001"),
+    ])
 
-    leftovers_after_inv = []
-    inv_map = {}
-    for r in unmatched:
-        if r.inventory_number:
-            inv_map.setdefault(r.inventory_number, []).append(r)
-        else:
-            leftovers_after_inv.append(r)
-            
-    for inv, recs in inv_map.items():
-        groups.append(AssetGroup(
-            asset_key=inv, records=recs,
-            match_status=determine_status(recs), match_method=MatchMethod.INVENTORY_NUMBER
-        ))
+    assert len(groups) == 1
+    group = groups[0]
+    assert group.asset_key == "ИНВ-001"
+    assert group.match_method == MatchMethod.INVENTORY_NUMBER
+    assert group.match_status == MatchStatus.MATCHED
+    assert len(group.records) == 2
 
-    unmatched = leftovers_after_inv
-    leftovers_after_serial = []
-    serial_map = {}
-    for r in unmatched:
-        if r.serial_number:
-            serial_map.setdefault(r.serial_number, []).append(r)
-        else:
-            leftovers_after_serial.append(r)
-            
-    for serial, recs in serial_map.items():
-        groups.append(AssetGroup(
-            asset_key=serial, records=recs,
-            match_status=determine_status(recs), match_method=MatchMethod.SERIAL_NUMBER
-        ))
 
-    unmatched = leftovers_after_serial
-    leftovers_after_name = []
-    name_map = {}
-    for r in unmatched:
-        if r.name:
-            name_map.setdefault(r.name, []).append(r)
-        else:
-            leftovers_after_name.append(r)
-            
-    for name, recs in name_map.items():
-        groups.append(AssetGroup(
-            asset_key=name, records=recs,
-            match_status=determine_status(recs), match_method=MatchMethod.NAME
-        ))
+def test_inventory_number_has_priority_over_serial():
+    groups = match_records([
+        make_rec(1, 1, name="ПК-01", inv="ИНВ-001", serial="SN-AAA"),
+        make_rec(2, 2, name="ПК-01", inv="ИНВ-001", serial="SN-BBB"),
+    ])
 
-    established_groups = {}
-    for g in groups:
-        group_name = next((rec.name for rec in g.records if rec.name), None)
-        if group_name:
-            established_groups[group_name] = g
+    assert len(groups) == 1
+    assert groups[0].match_method == MatchMethod.INVENTORY_NUMBER
+    assert {r.serial_number for r in groups[0].records} == {"SN-AAA", "SN-BBB"}
 
-    established_names = list(established_groups.keys())
 
-    for r in leftovers_after_name:
-        if not r.name or not established_names:
-            groups.append(AssetGroup(
-                asset_key=r.name or "UNKNOWN", records=[r],
-                match_status=MatchStatus.ONLY_IN_SOURCE, match_method=MatchMethod.FUZZY
-            ))
-            continue
+def test_match_by_serial_number_when_no_inventory():
+    groups = match_records([
+        make_rec(1, 1, name="ПК-01", serial="SN-001"),
+        make_rec(2, 2, name="ПК-02", serial="SN-001"),
+    ])
 
-        match = process.extractOne(
-            r.name, 
-            established_names, 
-            scorer=fuzz.token_sort_ratio, 
-            score_cutoff=85
-        )
+    assert len(groups) == 1
+    group = groups[0]
+    assert group.asset_key == "SN-001"
+    assert group.match_method == MatchMethod.SERIAL_NUMBER
+    assert group.match_status == MatchStatus.MATCHED
 
-        if match:
-            matched_name = match[0]
-            target_group = established_groups[matched_name]
-            target_group.records.append(r)
-            # Обновляем статус, так как добавили новую запись
-            target_group.match_status = determine_status(target_group.records)
-        else:
-            new_group = AssetGroup(
-                asset_key=r.name, records=[r],
-                match_status=MatchStatus.ONLY_IN_SOURCE, match_method=MatchMethod.FUZZY
-            )
-            groups.append(new_group)
-            established_groups[r.name] = new_group
-            established_names.append(r.name)
 
-    return groups
+def test_match_by_name_when_no_keys():
+    groups = match_records([
+        make_rec(1, 1, name="ПК-01"),
+        make_rec(2, 2, name="ПК-01"),
+    ])
+
+    assert len(groups) == 1
+    group = groups[0]
+    assert group.asset_key == "ПК-01"
+    assert group.match_method == MatchMethod.NAME
+    assert group.match_status == MatchStatus.MATCHED
+
+
+def test_single_record_is_only_in_source():
+    groups = match_records([make_rec(1, 1, name="ПК-01", inv="ИНВ-001")])
+
+    assert len(groups) == 1
+    assert groups[0].match_status == MatchStatus.ONLY_IN_SOURCE
+
+
+def test_same_source_duplicates_are_not_matched():
+    groups = match_records([
+        make_rec(1, 1, name="ПК-01", inv="ИНВ-001"),
+        make_rec(1, 2, name="ПК-01", inv="ИНВ-001"),
+    ])
+
+    assert len(groups) == 1
+    assert groups[0].match_status == MatchStatus.ONLY_IN_SOURCE
+
+
+def test_record_without_keys_goes_to_unknown_group():
+    groups = match_records([make_rec(1, 1)])
+
+    assert len(groups) == 1
+    group = groups[0]
+    assert group.asset_key == "UNKNOWN"
+    assert group.match_status == MatchStatus.ONLY_IN_SOURCE
+
+
+def test_same_name_with_different_inventory_gives_two_groups():
+    """Сильный ключ важнее имени: это два разных актива, а не один."""
+    groups = match_records([
+        make_rec(1, 1, name="ПК-01", inv="ИНВ-001"),
+        make_rec(1, 2, name="ПК-01", inv="ИНВ-002"),
+    ])
+
+    assert len(groups) == 2
+    assert {group.asset_key for group in groups} == {"ИНВ-001", "ИНВ-002"}
+
+
+def test_fuzzy_merges_similar_names():
+    groups = match_records([
+        make_rec(1, 1, name="ПК-01"),
+        make_rec(2, 2, name="ПК-001"),
+    ])
+
+    assert len(groups) == 1
+    group = groups[0]
+    assert group.match_method == MatchMethod.FUZZY
+    assert group.match_status == MatchStatus.MATCHED
+    assert group.match_score is not None
+
+
+def test_fuzzy_flags_ambiguous_match():
+    groups = match_records([
+        make_rec(1, 1, name="ПК-01"),
+        make_rec(2, 2, name="ПК-01A"),
+        make_rec(3, 3, name="ПК-01B"),
+    ])
+
+    assert any(
+        group.match_status == MatchStatus.AMBIGUOUS
+        for group in groups
+    )
+
+
+def test_fuzzy_does_not_merge_different_names():
+    groups = match_records([
+        make_rec(1, 1, name="ПК-01"),
+        make_rec(2, 2, name="Сервер-99"),
+    ])
+
+    assert len(groups) == 2
+    assert all(group.match_status == MatchStatus.ONLY_IN_SOURCE for group in groups)
