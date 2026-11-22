@@ -33,7 +33,7 @@ export default function Assets({ selectedAssetKey }) {
   )
   const [selectedKey, setSelectedKey] = useState(null)
 
-  
+
   useEffect(() => {
     if (selectedAssetKey) setSelectedKey(selectedAssetKey)
   }, [selectedAssetKey])

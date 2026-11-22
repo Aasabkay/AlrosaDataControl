@@ -45,7 +45,7 @@ def test_valid_row_has_no_issues(rules):
 @pytest.mark.parametrize("field", ["name", "asset_type", "inventory_number", "status"])
 def test_missing_required_field(rules, field):
     record, issues = norm(rules, **{field: ""})
-    assert record is not None                       
+    assert record is not None
     assert IssueCode.MISSING_FIELD in codes(issues)
     assert any(i.code == IssueCode.MISSING_FIELD and i.field == field for i in issues)
 
@@ -55,11 +55,11 @@ def test_status_synonym(rules):
     assert issues == []
 
 def test_invalid_status(rules):
-    record, issues = norm(rules, status="активн")   
-    assert record.status is None                    
-    assert record.status_raw == "активн"            
+    record, issues = norm(rules, status="активн")
+    assert record.status is None
+    assert record.status_raw == "активн"
     issue = next(i for i in issues if i.code == IssueCode.INVALID_STATUS)
-    assert issue.suggestion is not None             
+    assert issue.suggestion is not None
 
 @pytest.mark.parametrize("bad_inv", ["12345", "ИНВ-12", "ИНВ-1234567", "XX-123"])
 def test_bad_inventory_number_format(rules, bad_inv):
@@ -85,8 +85,8 @@ def test_iso_date_also_parses(rules):
 
 def test_unknown_asset_type(rules):
     record, issues = norm(rules, asset_type="Телефон")
-    assert record.asset_type == "Телефон"           
-    assert record.category is None                  
+    assert record.asset_type == "Телефон"
+    assert record.category is None
     assert IssueCode.INVALID_ASSET_TYPE in codes(issues)
 
 def test_whitespace_and_case_normalized(rules):

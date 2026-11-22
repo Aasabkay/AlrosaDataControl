@@ -5,10 +5,10 @@ from pydantic import BaseModel, Field, computed_field
 
 
 class IssueCategory(StrEnum):
-    EXCLUDED = "excluded"          
-    DUPLICATE = "duplicate"        
-    MISSING_OR_STATUS = "missing"  
-    MISMATCH = "mismatch"          
+    EXCLUDED = "excluded"
+    DUPLICATE = "duplicate"
+    MISSING_OR_STATUS = "missing"
+    MISMATCH = "mismatch"
 
 class IssueCode(StrEnum):
     BAD_COLUMN_COUNT = "BAD_COLUMN_COUNT"
@@ -47,28 +47,28 @@ class Severity(StrEnum):
     HIGH = "high"
 
 class AssetCategory(StrEnum):
-    ENDPOINT = "endpoint"        
-    NETWORK = "network"          
-    PERIPHERAL = "peripheral"    
-    ADAPTER = "adapter"          
+    ENDPOINT = "endpoint"
+    NETWORK = "network"
+    PERIPHERAL = "peripheral"
+    ADAPTER = "adapter"
 
 
 class MatchStatus(StrEnum):
-    MATCHED = "matched"                  
-    ONLY_IN_SOURCE = "only_in_source"    
-    AMBIGUOUS = "ambiguous"              
+    MATCHED = "matched"
+    ONLY_IN_SOURCE = "only_in_source"
+    AMBIGUOUS = "ambiguous"
 
 
 class MatchMethod(StrEnum):
     INVENTORY_NUMBER = "inventory_number"
     SERIAL_NUMBER = "serial_number"
-    NAME = "name"                        
-    FUZZY = "fuzzy"                      
+    NAME = "name"
+    FUZZY = "fuzzy"
 
 class RowRef(BaseModel):
     source_id: int
-    batch_id: int          
-    row_number: int        
+    batch_id: int
+    row_number: int
 
 class NormalizedRecord(BaseModel):
     ref: RowRef
@@ -78,14 +78,14 @@ class NormalizedRecord(BaseModel):
 
     name: str | None = None
     asset_type: str | None = None
-    category: AssetCategory | None = None  
+    category: AssetCategory | None = None
     manufacturer: str | None = None
     model: str | None = None
-    specs: str | None = None               
+    specs: str | None = None
 
-    status: str | None = None          
-    status_raw: str | None = None      
-    responsible_person: str | None = None  
+    status: str | None = None
+    status_raw: str | None = None
+    responsible_person: str | None = None
     location: str | None = None
     commissioning_date: date | None = None
 
@@ -96,11 +96,11 @@ class ParseResult(BaseModel):
     issues: list[Issue]
 
 class AssetGroup(BaseModel):
-    asset_key: str                       
-    records: list[NormalizedRecord]      
+    asset_key: str
+    records: list[NormalizedRecord]
     match_status: MatchStatus
     match_method: MatchMethod | None = None
-    match_score: float | None = None     
+    match_score: float | None = None
 
 
 class FieldValue(BaseModel):
@@ -111,14 +111,14 @@ class FieldValue(BaseModel):
 class Issue(BaseModel):
     code: IssueCode
     severity: Severity
-    message: str                         
+    message: str
 
-    refs: list[RowRef] = Field(default_factory=list)  
-    asset_key: str | None = None         
-    field: str | None = None             
+    refs: list[RowRef] = Field(default_factory=list)
+    asset_key: str | None = None
+    field: str | None = None
 
     values: list[FieldValue] = Field(default_factory=list)
-    suggestion: str | None = None        
+    suggestion: str | None = None
 
     @computed_field
     @property

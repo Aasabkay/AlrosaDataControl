@@ -14,7 +14,7 @@ async function request(path, options = {}) {
       const body = await response.json()
       if (body && body.detail) detail = body.detail
     } catch {
-      
+
     }
     throw new Error(`Ошибка API (${response.status}): ${detail}`)
   }
@@ -32,6 +32,6 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
-  
+
   upload: (path, formData) => request(path, { method: 'POST', body: formData }),
 }

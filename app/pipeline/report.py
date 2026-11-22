@@ -32,10 +32,10 @@ class ReportSummary(BaseModel):
     assets_with_issues: int
     ambiguous_assets: int
     issues_total: int
-    excluded_rows: int        
-    duplicates: int           
-    missing_or_status: int    
-    mismatches: int           
+    excluded_rows: int
+    duplicates: int
+    missing_or_status: int
+    mismatches: int
     by_code: dict[str, int]
 
 

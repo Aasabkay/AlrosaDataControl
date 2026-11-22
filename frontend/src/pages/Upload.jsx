@@ -26,7 +26,7 @@ export default function Upload({ onOpenLog, onOpenDashboard }) {
 
   const selectedSourceId = sourceId ?? (sources && sources.length ? sources[0].id : null)
 
-  
+
   const latestBySource = useMemo(() => {
     const map = new Map()
     for (const batch of batches ?? []) {
@@ -77,8 +77,8 @@ export default function Upload({ onOpenLog, onOpenDashboard }) {
       const data = await api.post('/reconciliations/', {
         batch_ids: latestBySource.map((batch) => batch.id),
       })
-      
-      
+
+
       const report = await api.get(`/reconciliations/${data.run_id}`)
       setRunResult({ ...data, issues_total: report.summary.issues_total })
     } catch (requestError) {

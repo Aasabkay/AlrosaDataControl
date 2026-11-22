@@ -95,7 +95,7 @@ class MockAPI:
 
     def report_xlsx(self) -> bytes:
         buffer = io.BytesIO()
-        from app.pipeline.report import Report  
+        from app.pipeline.report import Report
 
         report = Report.model_validate(self.report)
         write_report_xlsx(buffer, report)
@@ -105,7 +105,7 @@ class MockAPI:
 class MockHandler(BaseHTTPRequestHandler):
     api: MockAPI
 
-    def log_message(self, *args) -> None:  
+    def log_message(self, *args) -> None:
         pass
 
     def _send_json(self, payload, status: int = 200) -> None:
@@ -131,7 +131,7 @@ class MockHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
-    def do_OPTIONS(self) -> None:  
+    def do_OPTIONS(self) -> None:
         self.send_response(204)
         self._cors()
         self.end_headers()
@@ -199,7 +199,7 @@ class MockHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", 0) or 0)
         if length:
-            self.rfile.read(length)   
+            self.rfile.read(length)
 
         if self.path == "/imports":
             self._send_json({"import_id": 1}, 201)

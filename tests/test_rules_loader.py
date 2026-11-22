@@ -37,9 +37,9 @@ def test_unknown_column_returns_none(rules):
 
 @pytest.mark.parametrize("raw, expected", [
     ("активный", "В эксплуатации"),
-    ("В ЭКСПЛУАТАЦИИ", "В эксплуатации"),   
+    ("В ЭКСПЛУАТАЦИИ", "В эксплуатации"),
     ("на_складе", "На складе"),
-    ("Петров А.С.", None),                  
+    ("Петров А.С.", None),
 ])
 def test_status(rules, raw: str, expected: str):
     assert rules.status(raw) == expected
@@ -57,8 +57,8 @@ def test_asset_type(rules, raw, expected):
     ("ИНВ-0045", True),
     ("IN-009134", True),
     ("PR-007", True),
-    ("SN-007821", False),   
-    ("ИНВ-45", False),      
+    ("SN-007821", False),
+    ("ИНВ-45", False),
 ])
 def test_inventory_number_format(rules, value, is_valid):
     assert bool(rules.formats["inventory_number"].match(value)) == is_valid

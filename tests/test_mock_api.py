@@ -106,4 +106,4 @@ def test_xlsx_report_is_binary(base_url):
         assert response.status == 200
         data = response.read()
 
-    assert data[:2] == b"PK"   
+    assert data[:2] == b"PK"

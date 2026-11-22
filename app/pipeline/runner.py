@@ -12,9 +12,9 @@ from app.rules.loader import Rules, load_rules
 
 
 class PipelineResult(BaseModel):
-    records: list[NormalizedRecord]   
-    groups: list[AssetGroup]          
-    issues: list[Issue]               
+    records: list[NormalizedRecord]
+    groups: list[AssetGroup]
+    issues: list[Issue]
 
 
 def run_pipeline(

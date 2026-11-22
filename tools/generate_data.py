@@ -50,17 +50,17 @@ ASSETS = [
 ]
 
 TWEAKS = {
-    (1, 7): {"location": ""},                     
-    (1, 11): {"serial_number": "10.0.0.5"},       
-    (1, 16): {"commissioning_date": "32.13.2024"},  
-    (1, 17): {"asset_type": "Сканер 3D"},         
-    (2, 5): {"status": "Пришло в негодность"},    
-    (2, 9): {"status": ""},                       
-    (2, 10): {"serial_number": "SN00123"},        
-    (2, 13): {"location": "Офис 999"},            
-    (3, 8): {"responsible_person": ""},           
-    (3, 12): {"status": "На складе"},             
-    (3, 14): {"responsible_person": "Сидоров В.В."},  
+    (1, 7): {"location": ""},
+    (1, 11): {"serial_number": "10.0.0.5"},
+    (1, 16): {"commissioning_date": "32.13.2024"},
+    (1, 17): {"asset_type": "Сканер 3D"},
+    (2, 5): {"status": "Пришло в негодность"},
+    (2, 9): {"status": ""},
+    (2, 10): {"serial_number": "SN00123"},
+    (2, 13): {"location": "Офис 999"},
+    (3, 8): {"responsible_person": ""},
+    (3, 12): {"status": "На складе"},
+    (3, 14): {"responsible_person": "Сидоров В.В."},
 }
 
 SOURCES = [
@@ -85,7 +85,7 @@ SOURCES = [
             "Инв. №", "S/N", "Описание", "Текущее состояние",
             "Ответственный", "Место установки", "Дата установки",
         ],
-        "skip_assets": {15},   
+        "skip_assets": {15},
     },
     {
         "id": 3,
@@ -134,7 +134,7 @@ def special_rows(source_id: int) -> list[list[str]]:
             row["asset_type"] = "Рабочая станция"
             row["inventory_number"] = f"ИНВ-9{junk_num:04d}"
             values = [row[field] for field in FIELDS]
-            values.extend(["лишнее-1", "лишнее-2"])   
+            values.extend(["лишнее-1", "лишнее-2"])
             rows.append(values)
 
     if source_id == 2:
