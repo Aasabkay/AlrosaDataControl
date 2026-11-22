@@ -3,11 +3,13 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
+from app.config import DB_URL
 from app.database.models import RawRow, SourceRecord, Issue, Source
 from app.database.repositories.imports import create_source, create_batch, save_import
 from app.database.repositories.rules import load_rules_from_db
-from app.database.session import SessionLocal
 from app.pipeline.parser import parse_file
 
 current_dir = Path(__file__).parent
@@ -16,12 +18,19 @@ case_sample_csv_path = current_dir.parent / "sample_data" / "case_sample.csv"
 
 @pytest.fixture
 async def session():
-    async with SessionLocal() as session, session.begin():
-        try:
-            yield session
-        finally:
-            await session.rollback()
-            await session.close()
+    # Тест не должен коммитить в общую базу: данные живут внутри транзакции
+    # и откатываются. NullPool — чтобы соединение не пережило свой event loop.
+    engine = create_async_engine(DB_URL, poolclass=NullPool)
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        async with maker() as session:
+            transaction = await session.begin()
+            try:
+                yield session
+            finally:
+                await transaction.rollback()
+    finally:
+        await engine.dispose()
 
 async def test_save_import(session):
     rules = await load_rules_from_db(session)
@@ -41,9 +50,13 @@ async def test_save_import(session):
     assert by_number[3].status == "accepted"
     assert by_number[3].reject_reason is None
 
-    records = (await session.execute(select(SourceRecord))).scalars().all()
+    records = (await session.execute(
+        select(SourceRecord).where(SourceRecord.batch_id == batch.id)
+    )).scalars().all()
     assert len(records) == 1
     assert records[0].name == "ПК-05"
 
-    codes = {i.code for i in (await session.execute(select(Issue))).scalars()}
+    codes = {i.code for i in (await session.execute(
+        select(Issue).where(Issue.batch_id == batch.id)
+    )).scalars()}
     assert codes == {"BAD_COLUMN_COUNT", "INVALID_STATUS"}

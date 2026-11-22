@@ -59,3 +59,17 @@ class GetImportsIssuesSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ReconciliationInputSchema(BaseModel):
+    """Номера загрузок (import_batch.id), которые сводим между собой."""
+    batch_ids: list[int] = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ReconciliationOutputSchema(BaseModel):
+    run_id: int
+    status: str
+    assets_total: int
+    issues_total: int
+
+
