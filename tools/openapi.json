@@ -1,0 +1,312 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Сверка и контроль данных об ИТ-активах",
+    "description": "Контракт API: загрузка источников, журнал импорта, сверка, ошибки и отчёт. Мок-реализация — tools/mock_api.py (данные из sample_data/demo).",
+    "version": "0.1.0"
+  },
+  "servers": [
+    { "url": "http://localhost:8000", "description": "мок-API (tools/mock_api.py)" }
+  ],
+  "paths": {
+    "/sources": {
+      "get": {
+        "summary": "Список источников",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Source" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imports": {
+      "post": {
+        "summary": "Загрузка файла источника",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "source_id": { "type": "integer" },
+                  "batch_id": { "type": "integer" }
+                },
+                "required": ["file", "source_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Загрузка принята",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ImportResult" } }
+            }
+          }
+        }
+      }
+    },
+    "/imports/{import_id}/log": {
+      "get": {
+        "summary": "Журнал импорта: принятые и отбракованные строки",
+        "parameters": [
+          { "name": "import_id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ImportLog" } }
+            }
+          }
+        }
+      }
+    },
+    "/reconciliations": {
+      "post": {
+        "summary": "Запуск сверки по импортам",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "import_ids": { "type": "array", "items": { "type": "integer" } }
+                },
+                "required": ["import_ids"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Сверка создана",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReconciliationResult" } }
+            }
+          }
+        }
+      }
+    },
+    "/reconciliations/{reconciliation_id}": {
+      "get": {
+        "summary": "Отчёт по сверке (JSON)",
+        "parameters": [
+          { "name": "reconciliation_id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Report" } }
+            }
+          }
+        }
+      }
+    },
+    "/reconciliations/{reconciliation_id}/issues": {
+      "get": {
+        "summary": "Список ошибок с фильтрами",
+        "parameters": [
+          { "name": "reconciliation_id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "category", "in": "query", "schema": { "type": "string", "enum": ["excluded", "duplicate", "missing", "mismatch"] } },
+          { "name": "severity", "in": "query", "schema": { "type": "string", "enum": ["high", "medium", "low"] } },
+          { "name": "code", "in": "query", "schema": { "type": "string" } },
+          { "name": "field", "in": "query", "schema": { "type": "string" } },
+          { "name": "asset_key", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Issue" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reconciliations/{reconciliation_id}/assets": {
+      "get": {
+        "summary": "Таблица активов отчёта",
+        "parameters": [
+          { "name": "reconciliation_id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/AssetRow" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reconciliations/{reconciliation_id}/report": {
+      "get": {
+        "summary": "Отчёт в выбранном формате",
+        "parameters": [
+          { "name": "reconciliation_id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["json", "xlsx"], "default": "json" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Report" } },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assets/{asset_key}": {
+      "get": {
+        "summary": "Карточка актива: значения по источникам и diff",
+        "parameters": [
+          { "name": "asset_key", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AssetDetail" } }
+            }
+          },
+          "404": { "description": "Актив не найден" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RowRef": {
+        "type": "object",
+        "properties": {
+          "source_id": { "type": "integer" },
+          "batch_id": { "type": "integer" },
+          "row_number": { "type": "integer" }
+        }
+      },
+      "FieldValue": {
+        "type": "object",
+        "properties": {
+          "ref": { "$ref": "#/components/schemas/RowRef" },
+          "value": { "type": "string", "nullable": true }
+        }
+      },
+      "Issue": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string", "enum": ["excluded", "duplicate", "missing", "mismatch"] },
+          "code": { "type": "string", "example": "FIELD_MISMATCH" },
+          "severity": { "type": "string", "enum": ["high", "medium", "low"] },
+          "message": { "type": "string" },
+          "refs": { "type": "array", "items": { "$ref": "#/components/schemas/RowRef" } },
+          "asset_key": { "type": "string", "nullable": true },
+          "field": { "type": "string", "nullable": true },
+          "values": { "type": "array", "items": { "$ref": "#/components/schemas/FieldValue" } },
+          "suggestion": { "type": "string", "nullable": true }
+        },
+        "required": ["category", "code", "severity", "message", "refs", "values"]
+      },
+      "ReportMeta": {
+        "type": "object",
+        "properties": {
+          "organization": { "type": "string" },
+          "responsible": { "type": "string" },
+          "generated_at": { "type": "string", "format": "date" },
+          "period_start": { "type": "string", "format": "date", "nullable": true },
+          "period_end": { "type": "string", "format": "date", "nullable": true },
+          "commission": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "ReportSummary": {
+        "type": "object",
+        "properties": {
+          "assets_total": { "type": "integer" },
+          "assets_with_issues": { "type": "integer" },
+          "ambiguous_assets": { "type": "integer" },
+          "issues_total": { "type": "integer" },
+          "excluded_rows": { "type": "integer" },
+          "duplicates": { "type": "integer" },
+          "missing_or_status": { "type": "integer" },
+          "mismatches": { "type": "integer" },
+          "by_code": {
+            "type": "object",
+            "additionalProperties": { "type": "integer" }
+          }
+        }
+      },
+      "AssetRow": {
+        "type": "object",
+        "properties": {
+          "asset_key": { "type": "string" },
+          "name": { "type": "string", "nullable": true },
+          "manufacturer": { "type": "string", "nullable": true },
+          "model": { "type": "string", "nullable": true },
+          "inventory_number": { "type": "string", "nullable": true },
+          "serial_number": { "type": "string", "nullable": true },
+          "asset_type": { "type": "string", "nullable": true },
+          "location": { "type": "string", "nullable": true },
+          "status": { "type": "string", "nullable": true },
+          "responsible_person": { "type": "string", "nullable": true },
+          "sources": { "type": "array", "items": { "type": "integer" } },
+          "notes": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "meta": { "$ref": "#/components/schemas/ReportMeta" },
+          "summary": { "$ref": "#/components/schemas/ReportSummary" },
+          "assets": { "type": "array", "items": { "$ref": "#/components/schemas/AssetRow" } },
+          "issues": { "type": "array", "items": { "$ref": "#/components/schemas/Issue" } },
+          "recommendations": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Source": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" }
+        }
+      },
+      "ImportResult": {
+        "type": "object",
+        "properties": { "import_id": { "type": "integer" } }
+      },
+      "ReconciliationResult": {
+        "type": "object",
+        "properties": { "reconciliation_id": { "type": "integer" } }
+      },
+      "ImportLog": {
+        "type": "object",
+        "properties": {
+          "import_id": { "type": "integer" },
+          "issues": { "type": "array", "items": { "$ref": "#/components/schemas/Issue" } }
+        }
+      },
+      "AssetDetail": {
+        "type": "object",
+        "properties": {
+          "asset": { "$ref": "#/components/schemas/AssetRow" },
+          "issues": { "type": "array", "items": { "$ref": "#/components/schemas/Issue" } }
+        }
+      }
+    }
+  }
+}

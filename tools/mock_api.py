@@ -21,7 +21,7 @@ from app.pipeline.runner import run_pipeline
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DEMO_DIR = REPO_ROOT / "sample_data" / "demo"
-OPENAPI_PATH = REPO_ROOT / "docs" / "openapi.json"
+OPENAPI_PATH = REPO_ROOT / "tools" / "openapi.json"
 
 SOURCE_NAMES = {
     1: "Бухгалтерия (XLSX)",
