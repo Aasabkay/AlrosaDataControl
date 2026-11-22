@@ -3,6 +3,7 @@ test.py
 .mcp.json.tmp
 
 docs/
+uploads/
 
 # Виртуальное окружение Python (самый большой источник мусорных токенов)
 .venv/
