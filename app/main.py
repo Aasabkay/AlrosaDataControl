@@ -15,8 +15,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Фронтенд в дев-режиме живёт на 5173 порту и ходит на API напрямую,
-# поэтому без CORS браузер блокирует его запросы.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],

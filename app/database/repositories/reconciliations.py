@@ -1,5 +1,4 @@
-﻿"""Р РµРїРѕР·РёС‚РѕСЂРёР№ СЃРІРµСЂРєРё: РїСЂРѕРіРѕРЅ СЂР°СЃРєР»Р°РґС‹РІР°РµС‚ РіСЂСѓРїРїС‹ Рё РѕС€РёР±РєРё РїРѕ С‚Р°Р±Р»РёС†Р°Рј Р‘Р”."""
-
+﻿
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,7 +11,6 @@ from app.domain.schemas import (AssetCategory, AssetGroup, FieldValue, Issue,
 
 
 async def load_batches(session: AsyncSession, batch_ids: list[int]) -> list[ImportBatch]:
-    """Р—Р°РіСЂСѓР¶Р°РµС‚ Р·Р°РіСЂСѓР·РєРё РІРјРµСЃС‚Рµ СЃ Р·Р°РїРёСЃСЏРјРё Рё РёСЃС‚РѕС‡РЅРёРєРѕРј."""
     query = (select(ImportBatch)
              .where(ImportBatch.id.in_(batch_ids))
              .options(selectinload(ImportBatch.records),
@@ -23,7 +21,6 @@ async def load_batches(session: AsyncSession, batch_ids: list[int]) -> list[Impo
 
 
 def record_from_db(record: SourceRecord, source_id: int) -> NormalizedRecord:
-    """SourceRecord РёР· Р‘Р” -> NormalizedRecord РґР»СЏ РјР°С‚С‡РёРЅРіР° Рё РѕС‚С‡С‘С‚Р°."""
     category = None
     if record.category:
         try:
@@ -62,11 +59,6 @@ async def create_run(session: AsyncSession) -> ReconciliationRun:
 async def save_run(session: AsyncSession, run: ReconciliationRun,
                    groups: list[AssetGroup], issues: list[Issue],
                    record_map: dict[tuple[int, int], SourceRecord]) -> dict:
-    """РџРёС€РµС‚ РіСЂСѓРїРїС‹ РІ asset, РїСЂРѕСЃС‚Р°РІР»СЏРµС‚ asset_id Р·Р°РїРёСЃСЏРј, СЃРєР»Р°РґС‹РІР°РµС‚ РѕС€РёР±РєРё.
-
-    РћС€РёР±РєРё СЃРІРµСЂРєРё С…СЂР°РЅСЏС‚СЃСЏ СЃ reconciliation_run_id, Р° РЅРµ СЃ batch_id:
-    РѕРЅРё РѕС‚РЅРѕСЃСЏС‚СЃСЏ РєРѕ РІСЃРµРјСѓ РїСЂРѕРіРѕРЅСѓ, Р° РЅРµ Рє РѕРґРЅРѕР№ Р·Р°РіСЂСѓР·РєРµ.
-    """
     assets_total = 0
     for group in groups:
         asset = Asset(
@@ -111,7 +103,6 @@ async def get_run(session: AsyncSession, run_id: int) -> ReconciliationRun | Non
 
 
 async def load_run_assets(session: AsyncSession, run_id: int) -> list[Asset]:
-    """РђРєС‚РёРІС‹ РїСЂРѕРіРѕРЅР° РІРјРµСЃС‚Рµ СЃ Р·Р°РїРёСЃСЏРјРё, Р·Р°РіСЂСѓР·РєР°РјРё Рё РёСЃС‚РѕС‡РЅРёРєР°РјРё."""
     query = (select(Asset)
              .where(Asset.reconciliation_run_id == run_id)
              .options(selectinload(Asset.records)
@@ -123,7 +114,6 @@ async def load_run_assets(session: AsyncSession, run_id: int) -> list[Asset]:
 
 
 async def load_run_issues(session: AsyncSession, run_id: int) -> list[Issue]:
-    """РћС€РёР±РєРё СЃРІРµСЂРєРё + РѕС€РёР±РєРё СЂР°Р·Р±РѕСЂРѕРІ, РІРѕС€РµРґС€РёС… РІ РїСЂРѕРіРѕРЅ Р·Р°РіСЂСѓР·РѕРє."""
     assets = await load_run_assets(session, run_id)
     batch_ids = {record.batch_id for asset in assets for record in asset.records}
 
@@ -137,7 +127,6 @@ async def load_run_issues(session: AsyncSession, run_id: int) -> list[Issue]:
 
 
 def issue_from_db(row: Issue, source_by_batch: dict[int, int]) -> Issue:
-    """РЎС‚СЂРѕРєР° Р‘Р” -> РґРѕРјРµРЅРЅР°СЏ РјРѕРґРµР»СЊ Issue (РґР»СЏ СЃРѕСЂС‚РёСЂРѕРІРєРё Рё РѕС‚С‡С‘С‚Р°)."""
     return Issue(
         code=IssueCode(row.code),
         severity=Severity(row.severity),

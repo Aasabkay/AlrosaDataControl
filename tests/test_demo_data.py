@@ -30,7 +30,6 @@ def load_expected() -> dict:
 
 
 def test_seeded_errors_match_expected():
-    """«Посеяли N ошибок — нашли N»: цифры не должны расходиться."""
     expected = load_expected()
 
     result = run_pipeline(FILES, expected_source_ids={1, 2, 3})
@@ -47,7 +46,6 @@ def test_demo_covers_all_error_codes():
 
 
 def test_expected_file_is_fresh():
-    """Перегенерация данных не меняет результат — генератор детерминирован."""
     expected = load_expected()
 
     result = run_pipeline(FILES, expected_source_ids={1, 2, 3})

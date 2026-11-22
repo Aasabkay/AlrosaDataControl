@@ -25,8 +25,6 @@ case_sample_path = current_dir.parent / "sample_data" / "case_sample.csv"
 
 @pytest_asyncio.fixture
 async def session():
-    # Своё подключение на каждый тест с NullPool: без этого пул движка
-    # отдаёт соединение, созданное в чужом event loop, и тест падает.
     engine = create_async_engine(DB_URL, poolclass=NullPool)
     maker = async_sessionmaker(engine, expire_on_commit=False)
     try:
@@ -35,14 +33,12 @@ async def session():
             try:
                 yield session
             finally:
-                # Тест ничего не коммитит: данные живут только внутри транзакции.
                 await transaction.rollback()
     finally:
         await engine.dispose()
 
 
 async def _prepare_two_batches(session):
-    """Две загрузки одного и того же файла от разных источников."""
     rules = await load_rules_from_db(session)
     batches = []
     for index, source_name in enumerate(("Сверка тест: бухгалтерия", "Сверка тест: CMDB"), start=1):
@@ -57,7 +53,6 @@ async def _prepare_two_batches(session):
 async def test_reconciliation_run_saves_assets_and_issues(session):
     batches = await _prepare_two_batches(session)
 
-    # Расходимся по местоположению, чтобы детектор нашёл FIELD_MISMATCH.
     second_record = (await session.execute(
         select(SourceRecord).where(SourceRecord.batch_id == batches[1].id)
     )).scalar_one()
@@ -90,17 +85,14 @@ async def test_reconciliation_run_saves_assets_and_issues(session):
     )).scalars().all()
     assert len(assets) == 1
     assert assets[0].match_status == "matched"
-    # В case_sample у обеих записей одинаковый инв. номер IN-009134.
     assert assets[0].match_method == "inventory_number"
 
-    # Обе записи привязаны к активу.
     for batch in batches:
         record = (await session.execute(
             select(SourceRecord).where(SourceRecord.batch_id == batch.id)
         )).scalar_one()
         assert record.asset_id == assets[0].id
 
-    # Ошибка сверки хранится с reconciliation_run_id, а не с batch_id.
     run_issues = (await session.execute(
         select(Issue).where(Issue.reconciliation_run_id == run.id)
     )).scalars().all()
@@ -135,7 +127,6 @@ async def test_run_issues_are_readable_back(session):
     run = await create_run(session)
     await save_run(session, run, groups, issues, record_map)
 
-    # В прогон входят и ошибки сверки, и ошибки разборов его загрузок.
     stored = await load_run_issues(session, run.id)
     codes = {issue.code for issue in stored}
     assert "FIELD_MISMATCH" in codes

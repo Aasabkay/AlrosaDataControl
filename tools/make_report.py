@@ -1,10 +1,3 @@
-"""Демо-запуск: сверка файлов и выгрузка отчёта в JSON/XLSX.
-
-Пример:
-    python -m tools.make_report sample_data/case_sample.csv \
-        --organization "ООО «Тест»" --responsible "Иванов И.И." \
-        --json report.json --xlsx report.xlsx
-"""
 import argparse
 from datetime import date
 from pathlib import Path

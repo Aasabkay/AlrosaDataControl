@@ -1,4 +1,3 @@
-"""Репозиторий импорта: раскладывает ParseResult по таблицам БД."""
 
 from pathlib import Path
 
@@ -34,7 +33,6 @@ async def create_batch(session: AsyncSession, source_id: int,
 
 async def save_import(session: AsyncSession, batch_id: int, path: Path,
                       result: ParseResult) -> dict:
-    """Сохраняет результат парсинга. Возвращает счётчики для ответа API."""
 
     accepted_rows = {r.ref.row_number for r in result.records}
     rows_total = 0
@@ -95,7 +93,6 @@ async def list_sources(session: AsyncSession) -> list[Source]:
     return sources.scalars().all()
 
 async def list_batches(session: AsyncSession) -> list[ImportBatch]:
-    """Все загрузки, свежие первыми. Нужны для журнала импорта и запуска сверки."""
     query = (select(ImportBatch).options(selectinload(ImportBatch.raw_rows))
              .order_by(ImportBatch.id.desc()))
 

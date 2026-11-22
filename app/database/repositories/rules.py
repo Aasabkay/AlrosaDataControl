@@ -20,7 +20,6 @@ def _load_formats() -> dict[str, re.Pattern]:
 
 
 async def load_rules_from_db(session: AsyncSession) -> Rules:
-    # статусы: синоним -> канонический (build_lookup сам добавит маппинг канон. на себя)
     status_rows = (await session.execute(select(StatusSynonym))).scalars().all()
     synonyms_by_canonical: dict[str, list[str]] = defaultdict(list)
     for row in status_rows:
@@ -28,7 +27,6 @@ async def load_rules_from_db(session: AsyncSession) -> Rules:
             synonyms_by_canonical[row.canonical].append(row.synonym)
     statuses = build_lookup(dict(synonyms_by_canonical))
 
-    # типы: алиас -> (канонический тип, категория)
     type_rows = (await session.execute(
         select(AssetType).options(selectinload(AssetType.aliases))
     )).scalars().all()
@@ -37,7 +35,6 @@ async def load_rules_from_db(session: AsyncSession) -> Rules:
     asset_types = {alias: (canonical, categories[canonical])
                    for alias, canonical in build_lookup(aliases_by_type).items()}
 
-    # колонки: алиас шапки -> поле NormalizedRecord
     column_rows = (await session.execute(select(ColumnAlias))).scalars().all()
     aliases_by_field: dict[str, list[str]] = defaultdict(list)
     for row in column_rows:

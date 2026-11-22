@@ -15,7 +15,6 @@ ROW = "ПК-01;Рабочая станция;ИНВ-001"
 
 
 def write_csv(tmp_path, text: str, encoding="utf-8"):
-    """Пишет текст во временный CSV и возвращает путь к нему."""
     path = tmp_path / "test.csv"
     path.write_bytes(text.encode(encoding))
     return path

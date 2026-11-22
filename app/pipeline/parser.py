@@ -54,7 +54,7 @@ def parse_file(path: Path, source_id: int, batch_id: int, rules: Rules):
             continue
 
         row_status[row_number] = RowStatus.ACCEPTED
-        data = {} # data = {"name": "ПК-01", "asset_type": "Рабочая станция", ...}
+        data = {} 
         for index, value in enumerate(cells):
             field = field_map.get(index)
             if field:

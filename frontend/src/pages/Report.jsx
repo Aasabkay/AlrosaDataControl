@@ -3,7 +3,7 @@ import { Loading, ErrorNote, Panel } from '../components/ui'
 import { useApi } from '../hooks/useApi'
 import { useLatestRun } from '../hooks/useLatestRun'
 
-// Предпросмотр отчёта: те же данные, что уходят в XLSX и JSON.
+
 export default function Report() {
   const { runId } = useLatestRun()
   const { data: report, loading, error } = useApi(

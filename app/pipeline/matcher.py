@@ -2,10 +2,8 @@ from rapidfuzz import fuzz
 
 from app.domain.schemas import AssetGroup, MatchMethod, MatchStatus, NormalizedRecord
 
-# Насколько похожими должны быть подписи, чтобы склеить записи без номеров.
 FUZZY_SCORE_CUTOFF = 85
 
-# Если два кандидата отличаются меньше чем на столько баллов — это неоднозначность.
 AMBIGUITY_DELTA = 5
 
 
@@ -19,7 +17,6 @@ def _group_by_key(
     key_func,
     method: MatchMethod,
 ) -> tuple[list[AssetGroup], list[NormalizedRecord]]:
-    """Группирует записи по ключу, записи без ключа возвращает отдельно."""
     buckets: dict[str, list[NormalizedRecord]] = {}
     leftovers: list[NormalizedRecord] = []
 
@@ -43,7 +40,6 @@ def _group_by_key(
 
 
 def _signature(group: AssetGroup) -> str | None:
-    """Подпись для нечёткого сравнения: производитель + модель + название."""
     record = next((r for r in group.records if r.name), None)
     if record is None:
         return None
@@ -54,11 +50,6 @@ def _signature(group: AssetGroup) -> str | None:
 
 
 def _merge_similar_names(groups: list[AssetGroup]) -> list[AssetGroup]:
-    """Склеивает группы с похожими названиями, помечает неоднозначные.
-
-    Работает только с группами, у которых нет инвентарного и серийного номеров:
-    если номер есть, он уже решил, что это за актив, и гадать не нужно.
-    """
     candidates = [g for g in groups if g.match_method == MatchMethod.NAME]
     others = [g for g in groups if g.match_method != MatchMethod.NAME]
 
@@ -104,7 +95,6 @@ def _merge_similar_names(groups: list[AssetGroup]) -> list[AssetGroup]:
 
 
 def match_records(records: list[NormalizedRecord]) -> list[AssetGroup]:
-    """Склеивает записи в активы по ключам: инв. номер → серийный → название → fuzzy."""
     groups, leftovers = _group_by_key(
         records, lambda r: r.inventory_number, MatchMethod.INVENTORY_NUMBER
     )

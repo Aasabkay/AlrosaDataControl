@@ -12,10 +12,9 @@ from app.rules.loader import Rules, load_rules
 
 
 class PipelineResult(BaseModel):
-    """Итог полного прогона: что распознали, как сгруппировали и что нашли."""
-    records: list[NormalizedRecord]   # записи, прошедшие проверки
-    groups: list[AssetGroup]          # те же записи, склеенные в активы
-    issues: list[Issue]               # все ошибки, отсортированные по важности
+    records: list[NormalizedRecord]   
+    groups: list[AssetGroup]          
+    issues: list[Issue]               
 
 
 def run_pipeline(
@@ -24,32 +23,21 @@ def run_pipeline(
     rules: Rules | None = None,
     expected_source_ids: set[int] | None = None,
 ) -> PipelineResult:
-    """Полный прогон: разбор файлов → сопоставление → расхождения → сортировка.
-
-    files: {source_id: путь к файлу}. source_id — номер источника,
-    batch_id — номер загрузки (один прогон = одна загрузка).
-    expected_source_ids: источники, которые обязаны содержать все активы.
-    Если не передать — проверка MISSING_IN_SOURCE пропускается.
-    """
     if rules is None:
         rules = load_rules()
 
     records: list[NormalizedRecord] = []
     issues: list[Issue] = []
 
-    # 1. Разбираем каждый файл: строки → записи + ошибки этих строк.
     for source_id, path in files.items():
         parsed: ParseResult = parse_file(path, source_id, batch_id, rules)
         records.extend(parsed.records)
         issues.extend(parsed.issues)
 
-    # 2. Склеиваем записи разных источников в активы.
     groups: list[AssetGroup] = match_records(records)
 
-    # 3. Ищем то, что видно только на уровне группы.
     issues.extend(run_detectors(groups, expected_source_ids))
 
-    # 4. Выстраиваем ошибки для отчёта: HIGH → MEDIUM → LOW.
     return PipelineResult(
         records=records,
         groups=groups,

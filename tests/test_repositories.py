@@ -18,8 +18,6 @@ case_sample_csv_path = current_dir.parent / "sample_data" / "case_sample.csv"
 
 @pytest.fixture
 async def session():
-    # Тест не должен коммитить в общую базу: данные живут внутри транзакции
-    # и откатываются. NullPool — чтобы соединение не пережило свой event loop.
     engine = create_async_engine(DB_URL, poolclass=NullPool)
     maker = async_sessionmaker(engine, expire_on_commit=False)
     try:
@@ -71,5 +69,4 @@ async def test_list_batches_newest_first(session):
     ids = [batch.id for batch in batches]
 
     assert first.id in ids and second.id in ids
-    # Свежие загрузки идут первыми: журнал и «последняя загрузка на источник» зависят от этого.
     assert ids.index(second.id) < ids.index(first.id)

@@ -5,7 +5,6 @@ from app.database.models.base import Base
 
 
 class StatusSynonym(Base):
-    """Синоним статуса -> каноническое значение. Каноничный статус маппится сам на себя."""
 
     __tablename__ = "status_synonym"
 
@@ -15,7 +14,6 @@ class StatusSynonym(Base):
 
 
 class AssetType(Base):
-    """Канонический тип оборудования и его категория (endpoint/network/...)."""
 
     __tablename__ = "asset_type"
 
@@ -28,7 +26,6 @@ class AssetType(Base):
 
 
 class AssetTypeAlias(Base):
-    """Альтернативное название типа: "ПК" -> "Рабочая станция"."""
 
     __tablename__ = "asset_type_alias"
 
@@ -40,7 +37,6 @@ class AssetTypeAlias(Base):
 
 
 class ColumnAlias(Base):
-    """Название колонки в файле -> поле NormalizedRecord."""
 
     __tablename__ = "column_alias"
 

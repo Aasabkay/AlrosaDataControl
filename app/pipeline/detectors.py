@@ -1,7 +1,6 @@
 from app.domain.schemas import (AssetGroup, FieldValue, Issue, IssueCode,
                                 NormalizedRecord, Severity)
 
-# Поля, которые сравниваем между источниками внутри одной группы.
 COMPARED_FIELDS = ("status", "location", "responsible_person")
 
 
@@ -35,12 +34,6 @@ def _detect_field_mismatch(group: AssetGroup) -> list[Issue]:
 
 
 def _detect_cross_source_duplicates(group: AssetGroup) -> list[Issue]:
-    """Один источник дал несколько записей в одну группу — это дубль между источниками.
-
-    Внутри одного файла точные дубли и конфликты имён уже отсекает validators.
-    Сюда попадает то, что стало видно только после сопоставления: например, две
-    строки без номеров склеились в один актив по названию.
-    """
     by_source: dict[int, list[NormalizedRecord]] = {}
     for record in group.records:
         by_source.setdefault(record.ref.source_id, []).append(record)
@@ -67,12 +60,6 @@ def _detect_missing_in_source(
     group: AssetGroup,
     expected_source_ids: set[int],
 ) -> list[Issue]:
-    """Актив есть в одних источниках, но отсутствует в других.
-
-    Проверка включается только когда вызывающий явно передал список источников:
-    не каждый источник содержит полный перечень активов, поэтому по умолчанию
-    такие ошибки не создаются.
-    """
     if not group.records:
         return []
 
@@ -97,11 +84,6 @@ def run_detectors(
     groups: list[AssetGroup],
     expected_source_ids: set[int] | None = None,
 ) -> list[Issue]:
-    """Межгрупповые проверки. Проверки внутри одной строки живут в normalizer.
-
-    expected_source_ids: источники, которые обязаны содержать все активы.
-    Если не передать — проверка MISSING_IN_SOURCE пропускается.
-    """
     issues: list[Issue] = []
     for group in groups:
         issues.extend(_detect_field_mismatch(group))

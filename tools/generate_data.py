@@ -1,12 +1,3 @@
-"""Генератор демо-данных: три источника с заранее известными ошибками.
-
-Запуск:
-    python -m tools.generate_data
-
-Создаёт в sample_data/demo три файла-источника и expected.json с ожидаемым
-результатом сверки. Файлы детерминированы: одинаковый запуск даёт одинаковые
-данные. Это «посеяли N ошибок — нашли N» для защиты.
-"""
 
 import csv
 import json
@@ -21,7 +12,6 @@ DEMO_DIR = Path(__file__).resolve().parents[1] / "sample_data" / "demo"
 
 EXPECTED_SOURCE_IDS = {1, 2, 3}
 
-# Канонический порядок полей, как в columns.toml.
 FIELDS = (
     "name",
     "asset_type",
@@ -59,22 +49,18 @@ ASSETS = [
     (20, "Коммутатор-020", "Коммутатор", "Eltex", "MES2324"),
 ]
 
-# Правки по источникам: {(source_id, номер актива): {поле: значение}}.
 TWEAKS = {
-    # источник 1 (бухгалтерия)
-    (1, 7): {"location": ""},                     # пропущено местоположение
-    (1, 11): {"serial_number": "10.0.0.5"},       # IP вместо серийного номера
-    (1, 16): {"commissioning_date": "32.13.2024"},  # битая дата
-    (1, 17): {"asset_type": "Сканер 3D"},         # типа нет в справочнике
-    # источник 2 (выгрузка CMDB)
-    (2, 5): {"status": "Пришло в негодность"},    # статус не из справочника
-    (2, 9): {"status": ""},                       # статус пустой
-    (2, 10): {"serial_number": "SN00123"},        # серийный номер без дефиса
-    (2, 13): {"location": "Офис 999"},            # расхождение местоположения
-    # источник 3 (акт инвентаризации)
-    (3, 8): {"responsible_person": ""},           # пропущен МОЛ
-    (3, 12): {"status": "На складе"},             # расхождение статуса
-    (3, 14): {"responsible_person": "Сидоров В.В."},  # расхождение МОЛ
+    (1, 7): {"location": ""},                     
+    (1, 11): {"serial_number": "10.0.0.5"},       
+    (1, 16): {"commissioning_date": "32.13.2024"},  
+    (1, 17): {"asset_type": "Сканер 3D"},         
+    (2, 5): {"status": "Пришло в негодность"},    
+    (2, 9): {"status": ""},                       
+    (2, 10): {"serial_number": "SN00123"},        
+    (2, 13): {"location": "Офис 999"},            
+    (3, 8): {"responsible_person": ""},           
+    (3, 12): {"status": "На складе"},             
+    (3, 14): {"responsible_person": "Сидоров В.В."},  
 }
 
 SOURCES = [
@@ -99,7 +85,7 @@ SOURCES = [
             "Инв. №", "S/N", "Описание", "Текущее состояние",
             "Ответственный", "Место установки", "Дата установки",
         ],
-        "skip_assets": {15},   # актив отсутствует в этом источнике
+        "skip_assets": {15},   
     },
     {
         "id": 3,
@@ -139,35 +125,30 @@ def apply_tweaks(source_id: int, row: dict, asset_num: int) -> None:
 
 
 def special_rows(source_id: int) -> list[list[str]]:
-    """Строки, созданные специально ради ошибки: мусор, дубли, конфликты."""
     rows: list[list[str]] = []
 
     if source_id == 1:
-        # Число колонок не совпадает с шапкой (11), в конце есть данные.
         for junk_num in (1, 2):
             row = {field: "" for field in FIELDS}
             row["name"] = f"Мусор-{junk_num:03d}"
             row["asset_type"] = "Рабочая станция"
             row["inventory_number"] = f"ИНВ-9{junk_num:04d}"
             values = [row[field] for field in FIELDS]
-            values.extend(["лишнее-1", "лишнее-2"])   # 13 значений вместо 11
+            values.extend(["лишнее-1", "лишнее-2"])   
             rows.append(values)
 
     if source_id == 2:
-        # Точная копия строки актива 6: дубликат внутри источника.
         asset = ASSETS[5]
         row = base_row(asset)
         rows.append([row[field] for field in FIELDS])
 
     if source_id == 3:
         base = base_row(ASSETS[-1])
-        # Конфликт имён: одинаковое название, разные инв. номера.
         for inv in ("ИНВ-00021", "ИНВ-00210"):
             row = dict(base)
             row["name"] = "ПК-021"
             row["inventory_number"] = inv
             rows.append([row[field] for field in FIELDS])
-        # Конфликт инв. номеров: одинаковый номер, разные названия.
         for name in ("ПК-022", "Сервер-022"):
             row = dict(base)
             row["name"] = name

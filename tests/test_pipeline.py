@@ -23,7 +23,6 @@ HEADER = [
 
 
 def write_source(path: Path, status: str, location: str) -> None:
-    """Пишет минимальный валидный CSV одного источника."""
     with open(path, "w", encoding="utf-8", newline="") as file:
         writer = csv.writer(file, delimiter=";")
         writer.writerow(HEADER)

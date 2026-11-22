@@ -33,7 +33,7 @@ export default function Assets({ selectedAssetKey }) {
   )
   const [selectedKey, setSelectedKey] = useState(null)
 
-  // Выбор из другой вкладки (например, по клику на актив в списке ошибок).
+  
   useEffect(() => {
     if (selectedAssetKey) setSelectedKey(selectedAssetKey)
   }, [selectedAssetKey])

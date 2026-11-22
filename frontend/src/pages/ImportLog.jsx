@@ -9,8 +9,8 @@ import {
 } from '../components/ui'
 import { useApi } from '../hooks/useApi'
 
-// Журнал импорта: сводка по загрузке и таблица строк
-// (принята / отбракована, причина отбраковки — код ошибки).
+
+
 export default function ImportLog({ initialImportId }) {
   const { data: batches, loading: batchesLoading, error: batchesError } = useApi('/imports/')
   const { data: sources } = useApi('/sources/')

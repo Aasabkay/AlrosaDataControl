@@ -1,4 +1,3 @@
-"""Эндпоинты сверки: прогон по загрузкам, отчёт и список ошибок."""
 
 import io
 
@@ -34,7 +33,6 @@ reconciliations_router = APIRouter(prefix="/reconciliations", tags=["Сверк�
                              summary="Запустить сверку по загрузкам")
 async def run_reconciliation(session: sessionDepends,
                              payload: ReconciliationInputSchema):
-    # Порядок сохраняем, дубли убираем: сверта по одному и тому же батчу дважды не имеет смысла.
     batch_ids = list(dict.fromkeys(payload.batch_ids))
     batches = await load_batches(session, batch_ids)
 
@@ -67,7 +65,6 @@ async def run_reconciliation(session: sessionDepends,
 
 
 async def _load_report(session, run_id: int) -> Report:
-    """Общая загрузка прогона: группы и ошибки из БД -> отчёт."""
     run = await get_run(session, run_id)
     if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -81,8 +78,6 @@ async def _load_report(session, run_id: int) -> Report:
         for asset in assets
         for record in asset.records
     }
-    # У загрузок без принятых записей записей в asset не будет, но ошибки их строк
-    # всё равно должны попасть в отчёт — добираем источники по ссылкам ошибок.
     missing_batches = {
         ref.batch_id
         for row in issues_rows

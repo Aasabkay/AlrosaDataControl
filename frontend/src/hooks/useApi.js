@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
 
-// Загрузка данных: запрос выполняется при монтировании и при смене path.
-// path может быть null — тогда запрос не выполняется (ждём, например, run_id).
-// reload() — повторить запрос вручную (например, после загрузки файла).
+
+
+
 export function useApi(path) {
   const [state, setState] = useState({ data: null, loading: Boolean(path), error: null })
   const [tick, setTick] = useState(0)

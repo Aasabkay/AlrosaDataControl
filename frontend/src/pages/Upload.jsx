@@ -4,8 +4,8 @@ import { api } from '../api'
 import { Panel, Loading, ErrorNote, Empty, Badge } from '../components/ui'
 import { useApi } from '../hooks/useApi'
 
-// Экран загрузки: файл уходит на POST /imports (multipart), API разбирает
-// его по правилам из БД и возвращает номер загрузки (batch_id).
+
+
 export default function Upload({ onOpenLog, onOpenDashboard }) {
   const { data: sources, loading, error } = useApi('/sources/')
   const {
@@ -26,7 +26,7 @@ export default function Upload({ onOpenLog, onOpenDashboard }) {
 
   const selectedSourceId = sourceId ?? (sources && sources.length ? sources[0].id : null)
 
-  // Для сверки берём по одной самой свежей загрузке на каждый источник.
+  
   const latestBySource = useMemo(() => {
     const map = new Map()
     for (const batch of batches ?? []) {
@@ -77,8 +77,8 @@ export default function Upload({ onOpenLog, onOpenDashboard }) {
       const data = await api.post('/reconciliations/', {
         batch_ids: latestBySource.map((batch) => batch.id),
       })
-      // В ответе POST — только число сработавших детекторов; полное число
-      // замечаний (как на дашборде) берём из сводки прогона.
+      
+      
       const report = await api.get(`/reconciliations/${data.run_id}`)
       setRunResult({ ...data, issues_total: report.summary.issues_total })
     } catch (requestError) {

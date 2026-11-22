@@ -1,12 +1,3 @@
-"""Мок-API для фронтенда: те же данные, что вернёт настоящий API, без БД.
-
-Запуск:
-    python -m tools.mock_api --port 8000
-
-Данные берутся из sample_data/demo (см. tools.generate_data). Эндпоинты и
-формат ответов описаны в docs/openapi.json. CORS открыт, чтобы Vite-девсервер
-мог ходить напрямую.
-"""
 
 import argparse
 import io
@@ -31,7 +22,6 @@ SOURCE_NAMES = {
 
 
 class MockAPI:
-    """Готовит фикстуры один раз и отвечает на запросы из памяти."""
 
     def __init__(self, demo_dir: Path) -> None:
         files = {
@@ -105,8 +95,7 @@ class MockAPI:
 
     def report_xlsx(self) -> bytes:
         buffer = io.BytesIO()
-        # build_report уже вернул Report; пересобираем его из Pydantic-модели.
-        from app.pipeline.report import Report  # локальный импорт против цикла
+        from app.pipeline.report import Report  
 
         report = Report.model_validate(self.report)
         write_report_xlsx(buffer, report)
@@ -116,7 +105,7 @@ class MockAPI:
 class MockHandler(BaseHTTPRequestHandler):
     api: MockAPI
 
-    def log_message(self, *args) -> None:  # тишина в консоли
+    def log_message(self, *args) -> None:  
         pass
 
     def _send_json(self, payload, status: int = 200) -> None:
@@ -142,7 +131,7 @@ class MockHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
-    def do_OPTIONS(self) -> None:  # preflight для фронтенда
+    def do_OPTIONS(self) -> None:  
         self.send_response(204)
         self._cors()
         self.end_headers()
@@ -210,7 +199,7 @@ class MockHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", 0) or 0)
         if length:
-            self.rfile.read(length)   # содержимое мок не разбирает
+            self.rfile.read(length)   
 
         if self.path == "/imports":
             self._send_json({"import_id": 1}, 201)

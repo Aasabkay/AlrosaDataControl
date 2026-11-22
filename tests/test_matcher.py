@@ -100,7 +100,6 @@ def test_record_without_keys_goes_to_unknown_group():
 
 
 def test_same_name_with_different_inventory_gives_two_groups():
-    """Сильный ключ важнее имени: это два разных актива, а не один."""
     groups = match_records([
         make_rec(1, 1, name="ПК-01", inv="ИНВ-001"),
         make_rec(1, 2, name="ПК-01", inv="ИНВ-002"),

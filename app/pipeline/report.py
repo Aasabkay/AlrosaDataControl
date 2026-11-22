@@ -19,7 +19,6 @@ from app.pipeline.runner import PipelineResult
 
 
 class ReportMeta(BaseModel):
-    """Шапка отчёта: кто, когда и за какой период проводил сверку."""
     organization: str = ""
     responsible: str = ""
     generated_at: date = Field(default_factory=date.today)
@@ -29,20 +28,18 @@ class ReportMeta(BaseModel):
 
 
 class ReportSummary(BaseModel):
-    """Цифры для аналитической части и для заказчика."""
     assets_total: int
     assets_with_issues: int
     ambiguous_assets: int
     issues_total: int
-    excluded_rows: int        # уникальные строки, выброшенные из анализа
-    duplicates: int           # группы дублей, внутри источника и между
-    missing_or_status: int    # пропуски, статусы, форматы, типы
-    mismatches: int           # расхождения и отсутствие в источнике
+    excluded_rows: int        
+    duplicates: int           
+    missing_or_status: int    
+    mismatches: int           
     by_code: dict[str, int]
 
 
 class AssetRow(BaseModel):
-    """Одна строка таблицы отчёта: актив и его итоговые значения."""
     asset_key: str
     name: str | None = None
     manufacturer: str | None = None
@@ -66,7 +63,6 @@ class Report(BaseModel):
 
 
 def _first_value(records: list[NormalizedRecord], field_name: str):
-    """Первое непустое значение поля среди записей группы."""
     for record in records:
         value = getattr(record, field_name)
         if value:
@@ -75,7 +71,6 @@ def _first_value(records: list[NormalizedRecord], field_name: str):
 
 
 def _issue_note(issue: Issue) -> str:
-    """Короткая пометка для таблицы активов."""
     if issue.code == IssueCode.FIELD_MISMATCH:
         return f"расхождение: {issue.field}" if issue.field else "расхождение"
     if issue.code == IssueCode.MISSING_FIELD:
@@ -148,7 +143,6 @@ def _fill_notes(
 
 
 def _add_match_notes(assets: list[AssetRow], groups: list[AssetGroup]) -> None:
-    """Пометки про качество сопоставления: их не видно в Issue, но они важны."""
     for asset, group in zip(assets, groups):
         if group.match_status == MatchStatus.AMBIGUOUS:
             note = "неоднозначное сопоставление"
@@ -191,7 +185,6 @@ def _build_summary(result: PipelineResult, assets: list[AssetRow]) -> ReportSumm
 
 
 def _build_recommendations(summary: ReportSummary) -> list[str]:
-    """Короткие выводы человеческим языком — их читает комиссия, а не программа."""
     items: list[str] = []
 
     if summary.mismatches:
@@ -220,10 +213,6 @@ def _build_recommendations(summary: ReportSummary) -> list[str]:
 
 
 def build_report(result: PipelineResult, meta: ReportMeta) -> Report:
-    """Собирает отчёт из результата прогона: шапка, таблица активов, цифры.
-
-    Чистая функция: ничего не читает и не пишет на диск, поэтому её легко тестировать.
-    """
     assets, maps = _build_assets(result.groups)
     _fill_notes(assets, result.issues, *maps)
     _add_match_notes(assets, result.groups)
@@ -240,7 +229,6 @@ def build_report(result: PipelineResult, meta: ReportMeta) -> Report:
 
 
 def report_to_json(report: Report) -> str:
-    """JSON для API и фронта. Даты и enum превращаются в строки автоматически."""
     return report.model_dump_json(indent=2)
 
 
@@ -334,7 +322,6 @@ def _write_assets_sheet(sheet, report: Report) -> None:
 
 
 def _format_values(issue: Issue) -> str:
-    """Показывает, что записано в каждом источнике — это и есть дифф."""
     return "; ".join(
         f"источник {value.ref.source_id}, строка {value.ref.row_number}: {value.value}"
         for value in issue.values
@@ -377,7 +364,6 @@ def _set_widths(sheet, widths: list[int]) -> None:
 
 
 def write_report_xlsx(path: Path, report: Report) -> None:
-    """Пишет отчёт в Excel: сводка, таблица активов и полный список ошибок."""
     workbook = Workbook()
 
     summary_sheet = workbook.active

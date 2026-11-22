@@ -151,8 +151,6 @@ def test_adapter_row_above_not_endpoint():
     assert [i.code for i in issues] == [IssueCode.NO_PARENT]
 
 def test_cascade_child_of_rejected_child():
-    # периферия исключается (родитель в rejected_cells),
-    # адаптер строкой ниже должен исключиться следом на втором витке
     records = [rec(2, name="Принтер-1", category=PER, location="Офис\\ПК-99"),
                rec(3, name="Сетевуха", category=ADA)]
     excluded, issues = resolve(records, rejected_cells={normalize_key("ПК-99")})
