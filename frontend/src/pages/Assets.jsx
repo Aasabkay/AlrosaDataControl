@@ -12,6 +12,7 @@ import {
   severityTone,
 } from '../components/ui'
 import { useApi } from '../hooks/useApi'
+import { useLatestRun } from '../hooks/useLatestRun'
 
 const FIELDS = [
   ['name', 'Наименование'],
@@ -26,7 +27,10 @@ const FIELDS = [
 ]
 
 export default function Assets({ selectedAssetKey }) {
-  const { data: assets, loading, error } = useApi('/reconciliations/1/assets')
+  const { runId } = useLatestRun()
+  const { data: assets, loading, error } = useApi(
+    runId ? `/reconciliations/${runId}/assets` : null
+  )
   const [selectedKey, setSelectedKey] = useState(null)
 
   // Выбор из другой вкладки (например, по клику на актив в списке ошибок).
@@ -34,7 +38,10 @@ export default function Assets({ selectedAssetKey }) {
     if (selectedAssetKey) setSelectedKey(selectedAssetKey)
   }, [selectedAssetKey])
 
-  const detailPath = selectedKey ? `/assets/${encodeURIComponent(selectedKey)}` : null
+  const detailPath =
+    runId && selectedKey
+      ? `/reconciliations/${runId}/assets/${encodeURIComponent(selectedKey)}`
+      : null
   const { data: detail, loading: detailLoading, error: detailError } = useApi(detailPath)
 
   return (

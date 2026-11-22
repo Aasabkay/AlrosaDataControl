@@ -1,13 +1,18 @@
 import { api } from '../api'
 import { Loading, ErrorNote, Panel } from '../components/ui'
 import { useApi } from '../hooks/useApi'
+import { useLatestRun } from '../hooks/useLatestRun'
 
 // Предпросмотр отчёта: те же данные, что уходят в XLSX и JSON.
 export default function Report() {
-  const { data: report, loading, error } = useApi('/reconciliations/1')
+  const { runId } = useLatestRun()
+  const { data: report, loading, error } = useApi(
+    runId ? `/reconciliations/${runId}` : null
+  )
 
   if (loading) return <Loading />
   if (error) return <ErrorNote message={error} />
+  if (!report) return <p className="muted">Свёр ещё не было.</p>
 
   const summary = report.summary
 
@@ -17,12 +22,15 @@ export default function Report() {
         title="Отчёт о сверке"
         actions={
           <div className="controls">
-            <a className="button-like" href={`${api.baseUrl}/reconciliations/1/report?format=xlsx`}>
+            <a
+              className="button-like"
+              href={`${api.baseUrl}/reconciliations/${runId}/report?format=xlsx`}
+            >
               Скачать XLSX
             </a>
             <a
               className="button-like secondary"
-              href={`${api.baseUrl}/reconciliations/1/report?format=json`}
+              href={`${api.baseUrl}/reconciliations/${runId}/report?format=json`}
               target="_blank"
               rel="noreferrer"
             >

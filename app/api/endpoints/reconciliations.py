@@ -1,11 +1,15 @@
 """Эндпоинты сверки: прогон по загрузкам, отчёт и список ошибок."""
 
-from fastapi import APIRouter, HTTPException
+import io
+
+from fastapi import APIRouter, HTTPException, Response
+from sqlalchemy import select
 from starlette import status
 
 from app.api.dependencies import sessionDepends
 from app.api.schemas import (ReconciliationInputSchema,
                              ReconciliationOutputSchema)
+from app.database.models import ReconciliationRun
 from app.database.repositories.reconciliations import (create_run, get_run,
                                                        group_from_db,
                                                        issue_from_db,
@@ -18,7 +22,7 @@ from app.database.repositories.rules import load_rules_from_db
 from app.pipeline.classifier import classify_issues
 from app.pipeline.detectors import run_detectors
 from app.pipeline.matcher import match_records
-from app.pipeline.report import Report, ReportMeta, build_report
+from app.pipeline.report import Report, ReportMeta, build_report, write_report_xlsx
 from app.pipeline.runner import PipelineResult
 
 reconciliations_router = APIRouter(prefix="/reconciliations", tags=["Сверка активов"])
@@ -99,11 +103,72 @@ async def _load_report(session, run_id: int) -> Report:
     return build_report(result, ReportMeta(generated_at=run.started_at.date()))
 
 
+@reconciliations_router.get("/", status_code=status.HTTP_200_OK,
+                            summary="Список прогонов сверки (свежие первыми)")
+async def list_reconciliations(session: sessionDepends):
+    query = select(ReconciliationRun).order_by(ReconciliationRun.id.desc())
+    result = await session.execute(query)
+    runs = result.scalars().all()
+    return [
+        {"run_id": run.id, "status": run.status, "started_at": run.started_at}
+        for run in runs
+    ]
+
+
+@reconciliations_router.get("/{run_id}/assets/{asset_key}",
+                            status_code=status.HTTP_200_OK,
+                            summary="Карточка актива: значения по источникам и diff")
+async def get_reconciliation_asset(session: sessionDepends,
+                                   run_id: int, asset_key: str):
+    report = await _load_report(session, run_id)
+    asset = next(
+        (row for row in report.assets if row.asset_key == asset_key),
+        None,
+    )
+    if asset is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Актив {asset_key!r} в прогоне {run_id} не найден")
+
+    assets = await load_run_assets(session, run_id)
+    ref_to_asset = {
+        (record.batch_id, record.row_number): db_asset.asset_key
+        for db_asset in assets
+        for record in db_asset.records
+    }
+    issues = [
+        issue for issue in report.issues
+        if issue.asset_key == asset_key
+        or asset_key in {
+            ref_to_asset.get((ref.batch_id, ref.row_number))
+            for ref in issue.refs
+        }
+    ]
+    return {"asset": asset, "issues": issues}
+
+
 @reconciliations_router.get("/{run_id}", status_code=status.HTTP_200_OK,
                             response_model=Report,
                             summary="Отчёт по сверке (JSON, как в tools/openapi.json)")
 async def get_reconciliation_report(session: sessionDepends, run_id: int):
     return await _load_report(session, run_id)
+
+
+@reconciliations_router.get("/{run_id}/report", status_code=status.HTTP_200_OK,
+                            summary="Отчёт в выбранном формате: json или xlsx")
+async def download_reconciliation_report(session: sessionDepends, run_id: int,
+                                         format: str = "json"):
+    report = await _load_report(session, run_id)
+
+    if format != "xlsx":
+        return report
+
+    buffer = io.BytesIO()
+    write_report_xlsx(buffer, report)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="reconciliation_{run_id}.xlsx"'},
+    )
 
 
 @reconciliations_router.get("/{run_id}/assets", status_code=status.HTTP_200_OK,

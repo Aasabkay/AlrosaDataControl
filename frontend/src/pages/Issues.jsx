@@ -13,6 +13,7 @@ import {
   severityTone,
 } from '../components/ui'
 import { useApi } from '../hooks/useApi'
+import { useLatestRun } from '../hooks/useLatestRun'
 
 const CATEGORY_OPTIONS = [
   { value: '', label: 'все категории' },
@@ -30,6 +31,7 @@ const SEVERITY_OPTIONS = [
 ]
 
 export default function Issues({ onOpenAsset }) {
+  const { runId } = useLatestRun()
   const [category, setCategory] = useState('')
   const [severity, setSeverity] = useState('')
   const [code, setCode] = useState('')
@@ -41,7 +43,7 @@ export default function Issues({ onOpenAsset }) {
   const query = params.toString()
 
   const { data: issues, loading, error } = useApi(
-    `/reconciliations/1/issues${query ? `?${query}` : ''}`
+    runId ? `/reconciliations/${runId}/issues${query ? `?${query}` : ''}` : null
   )
 
   return (

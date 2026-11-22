@@ -71,17 +71,17 @@ export default function Upload({ onOpenLog }) {
 
       {result && (
         <div className="success-note">
-          Загрузка принята, номер загрузки: <b>{result.import_id}</b>.{' '}
+          Загрузка принята, номер загрузки (batch_id): <b>{result.batch_id ?? result.import_id}</b>.{' '}
           <button
             className="link"
             type="button"
-            onClick={() => onOpenLog(sourceId)}
+            onClick={() => onOpenLog(result.batch_id ?? result.import_id)}
           >
             Открыть журнал импорта
           </button>
           <p className="muted">
-            Пока работает мок-API: файл принимается, но разбор выполняется на
-            демо-данных. Настоящая обработка появится вместе с API и БД.
+            Файл разобран: принято строк {result.records_accepted} из {result.rows_total},
+            ошибок разбора {result.issues_count}.
           </p>
         </div>
       )}

@@ -2,11 +2,16 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 
 // Загрузка данных: запрос выполняется при монтировании и при смене path.
-// Возвращает { data, loading, error } — одинаковый контракт для всех страниц.
+// path может быть null — тогда запрос не выполняется (ждём, например, run_id).
 export function useApi(path) {
-  const [state, setState] = useState({ data: null, loading: true, error: null })
+  const [state, setState] = useState({ data: null, loading: Boolean(path), error: null })
 
   useEffect(() => {
+    if (!path) {
+      setState({ data: null, loading: false, error: null })
+      return
+    }
+
     let alive = true
     setState({ data: null, loading: true, error: null })
 

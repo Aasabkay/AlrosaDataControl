@@ -1,13 +1,18 @@
 import { api } from '../api'
 import { Loading, ErrorNote, Empty } from '../components/ui'
 import { useApi } from '../hooks/useApi'
+import { useLatestRun } from '../hooks/useLatestRun'
 
 export default function Dashboard() {
-  const { data: report, loading, error } = useApi('/reconciliations/1')
+  const { runId, loading: runLoading, error: runError } = useLatestRun()
+  const { data: report, loading, error } = useApi(
+    runId ? `/reconciliations/${runId}` : null
+  )
   const { data: sources } = useApi('/sources')
 
-  if (loading) return <Loading />
-  if (error) return <ErrorNote message={error} />
+  if (runLoading || loading) return <Loading />
+  if (runError || error) return <ErrorNote message={runError ?? error} />
+  if (!report) return <Empty>Свёр ещё не было — загрузите файлы и запустите сверку.</Empty>
 
   const summary = report.summary
   const maxCount = Math.max(1, ...Object.values(summary.by_code))
@@ -99,7 +104,7 @@ export default function Dashboard() {
       </div>
 
       <p className="footnote">
-        Данные: {api.baseUrl} (мок-API). Настоящее API заменит этот адрес без правок интерфейса.
+        Данные: {api.baseUrl} (настоящее API). Прогон сверки: {runId}.
       </p>
     </>
   )
