@@ -1,11 +1,10 @@
-
 import io
 
 from fastapi import APIRouter, HTTPException, Response
 from sqlalchemy import select
 from starlette import status
 
-from app.api.dependencies import sessionDepends
+from app.api.dependencies import sessionDepends, roleDepends
 from app.api.schemas import (ReconciliationInputSchema,
                              ReconciliationOutputSchema)
 from app.config import REPORT_ORGANIZATION, REPORT_RESPONSIBLE
@@ -25,7 +24,8 @@ from app.pipeline.matcher import match_records
 from app.pipeline.report import Report, ReportMeta, build_report, write_report_xlsx
 from app.pipeline.runner import PipelineResult
 
-reconciliations_router = APIRouter(prefix="/reconciliations", tags=["Сверка активов"])
+reconciliations_router = APIRouter(prefix="/reconciliations", tags=["Сверка активов"],
+                                   dependencies=[roleDepends])
 
 
 @reconciliations_router.post("/", status_code=status.HTTP_201_CREATED,

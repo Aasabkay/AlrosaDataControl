@@ -10,6 +10,7 @@ DB_NAME = os.getenv("DB_NAME")
 DB_PORT = os.getenv("DB_PORT")
 DB_URL = os.getenv("DB_URL")
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")
+JWT_SECRET = os.getenv("JWT_SECRET")
 
 REPORT_ORGANIZATION = os.getenv("REPORT_ORGANIZATION", "")
 REPORT_RESPONSIBLE = os.getenv("REPORT_RESPONSIBLE", "")

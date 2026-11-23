@@ -12,3 +12,5 @@ sqlalchemy==2.1.6
 rapidfuzz>=3.14
 python-multipart==0.0.34
 uvicorn==0.54.0
+pwdlib[argon2]==0.4.2
+python-jose==3.5.0

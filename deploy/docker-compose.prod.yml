@@ -1,8 +1,3 @@
-# Прод-стек для VPS: база + API + nginx со статикой фронтенда.
-# Запуск из корня репозитория:
-#   docker compose -f deploy/docker-compose.prod.yml up -d --build
-# Секреты — в deploy/.env (рядом с этим файлом, в репозиторий не попадает).
-
 services:
   db:
     image: postgres:18-alpine
@@ -12,14 +7,12 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      # Для образа PG18 том монтируется в /var/lib/postgresql (не .../data).
       - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 3s
       retries: 10
-    # Порт базы наружу не открываем: доступ только из сети compose.
 
   api:
     build: ..
@@ -34,7 +27,6 @@ services:
       REPORT_RESPONSIBLE: ${REPORT_RESPONSIBLE:-}
     volumes:
       - uploads-data:/app/uploads
-    # Порт не публикуем: снаружи только nginx.
 
   nginx:
     image: nginx:alpine

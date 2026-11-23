@@ -4,11 +4,12 @@ from app.database.models.dictionaries import (AssetType, AssetTypeAlias,
                                               ColumnAlias, StatusSynonym)
 from app.database.models.imports import ImportBatch, RawRow, Source, SourceRecord
 from app.database.models.issues import Issue, IssueRef
+from app.database.models.users import Users
 
 __all__ = [
     "Base",
     "Source", "ImportBatch", "RawRow", "SourceRecord",
     "Asset", "ReconciliationRun",
     "Issue", "IssueRef",
-    "StatusSynonym", "AssetType", "AssetTypeAlias", "ColumnAlias",
+    "StatusSynonym", "AssetType", "AssetTypeAlias", "ColumnAlias", "Users"
 ]
