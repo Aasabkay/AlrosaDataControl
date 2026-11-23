@@ -71,4 +71,12 @@ class ReconciliationOutputSchema(BaseModel):
     assets_total: int
     issues_total: int
 
+class UserRegister(BaseModel):
+    login: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
 
