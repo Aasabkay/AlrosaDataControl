@@ -7,7 +7,7 @@ from fastapi import APIRouter, UploadFile, HTTPException
 from fastapi.params import Form
 from starlette import status
 
-from app.api.dependencies import sessionDepends
+from app.api.dependencies import sessionDepends, roleDepends
 from app.api.schemas import ImportOutputSchema, GetImportsBatchSchema, GetImportsLogsSchema, GetImportsIssuesSchema
 from app.config import UPLOAD_DIR
 from app.database.repositories.imports import list_sources, create_batch, save_import, get_batch, get_import_log, \
@@ -16,7 +16,8 @@ from app.database.repositories.rules import load_rules_from_db
 from app.pipeline.parser import parse_file
 
 imports_router = APIRouter(prefix="/imports",
-    tags=["Загрузка, взаимодействие с загруженными файлами"])
+    tags=["Загрузка, взаимодействие с загруженными файлами"],
+    dependencies=[roleDepends])
 
 ALLOWED_EXTENSIONS = {".csv", ".xlsx"}
 MAX_SIZE = 100 * 1024 * 1024
