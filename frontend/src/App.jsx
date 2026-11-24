@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { api, getToken } from './api'
 import Dashboard from './pages/Dashboard'
 import Upload from './pages/Upload'
 import ImportLog from './pages/ImportLog'
 import Issues from './pages/Issues'
 import Assets from './pages/Assets'
 import Report from './pages/Report'
+import Auth from './pages/Auth'
 
 const TABS = [
   { id: 'dashboard', label: 'Дашборд' },
@@ -17,9 +19,16 @@ const TABS = [
 ]
 
 export default function App() {
+  const [authenticated, setAuthenticated] = useState(Boolean(getToken()))
   const [tab, setTab] = useState('dashboard')
   const [logImportId, setLogImportId] = useState(null)
   const [assetKey, setAssetKey] = useState(null)
+
+  useEffect(() => {
+    const logout = () => setAuthenticated(false)
+    window.addEventListener('auth:unauthorized', logout)
+    return () => window.removeEventListener('auth:unauthorized', logout)
+  }, [])
 
   function openLog(importId) {
     setLogImportId(importId)
@@ -29,6 +38,10 @@ export default function App() {
   function openAsset(key) {
     setAssetKey(key)
     setTab('assets')
+  }
+
+  if (!authenticated) {
+    return <Auth onAuthenticated={() => setAuthenticated(true)} />
   }
 
   return (
@@ -50,6 +63,16 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <button
+          className="link logout"
+          type="button"
+          onClick={() => {
+            api.logout()
+            setAuthenticated(false)
+          }}
+        >
+          Выйти
+        </button>
       </header>
 
       <main>

@@ -7,7 +7,7 @@ from app.api.endpoints.auth import auth_router
 
 main_router = APIRouter()
 
-main_router.include_router(auth_router)
+main_router.include_router(auth_router, prefix="/auth")
 main_router.include_router(imports_router)
 main_router.include_router(sources_router)
 main_router.include_router(reconciliations_router)

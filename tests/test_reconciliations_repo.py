@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.orm import selectinload
 from sqlalchemy.pool import NullPool
 
 from app.config import DB_URL
@@ -95,6 +96,7 @@ async def test_reconciliation_run_saves_assets_and_issues(session):
 
     run_issues = (await session.execute(
         select(Issue).where(Issue.reconciliation_run_id == run.id)
+        .options(selectinload(Issue.refs))
     )).scalars().all()
     assert len(run_issues) == 1
     assert run_issues[0].code == "FIELD_MISMATCH"

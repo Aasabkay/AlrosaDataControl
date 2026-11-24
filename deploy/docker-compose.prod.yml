@@ -23,6 +23,7 @@ services:
     environment:
       DB_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       UPLOAD_DIR: /app/uploads
+      JWT_SECRET: ${JWT_SECRET}
       REPORT_ORGANIZATION: ${REPORT_ORGANIZATION:-}
       REPORT_RESPONSIBLE: ${REPORT_RESPONSIBLE:-}
     volumes:

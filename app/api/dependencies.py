@@ -9,4 +9,4 @@ from app.database.session import get_session
 
 sessionDepends = Annotated[AsyncSession, Depends(get_session)]
 
-roleDepends = Depends(require_role(UsersRoles.ADMIN.value))
+roleDepends = Depends(require_role(UsersRoles.ADMIN.value, UsersRoles.USER.value))

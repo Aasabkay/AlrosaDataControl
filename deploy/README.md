@@ -96,6 +96,27 @@ Swagger API: `http://alrosadatacontrol.top/docs`.
 
 ---
 
+## 3.3. Вход и регистрация
+
+Сайт пускает только после входа. На старте открывается форма «Вход / Регистрация»:
+
+- `POST /auth/register` — JSON `{"login": "...", "password": "..."}`, создаёт роль `user`;
+- `POST /auth/login` — form-data `username` / `password`, возвращает `access_token`;
+- токен хранится в браузере и уходит во все запросы как `Authorization: Bearer <token>`;
+- при истечении токена (30 мин) форма входа появляется снова.
+
+В `deploy/.env` обязательно должен быть `JWT_SECRET` — сгенерировать:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Защищённые операции (загрузка файла, создание источника, запуск сверки) доступны
+ролям `user` и `admin`. Для отдельного администратора есть
+`python -m tools.create_admin_user`.
+
+---
+
 ## 4. HTTPS (Let's Encrypt)
 
 nginx уже отдаёт `/.well-known/acme-challenge/` из `deploy/certbot/www`,
